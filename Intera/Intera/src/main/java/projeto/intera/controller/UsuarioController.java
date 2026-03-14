@@ -22,6 +22,7 @@ public class UsuarioController {
 
     @GetMapping
     public List<Usuario> listarTodos() {
+        // Teste branch
         return repository.findAll();
 
     }
