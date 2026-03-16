@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Adega</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; display: flex; flex-direction: column; align-items: center; }
+        .formulario { padding: 20px; border: 1px solid #ccc; width: 300px; border-radius: 5px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
+        input { display: block; margin-bottom: 15px; width: 90%; padding: 8px; border: 1px solid #999; border-radius: 3px; }
+        button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px; width: 97%; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .mensagem { margin-top: 15px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h2>Acesso ao Sistema</h2>
+    
+    <div class="formulario">
+        <input type="email" id="emailLogin" placeholder="Digite seu E-mail">
+        <input type="password" id="senhaLogin" placeholder="Digite sua Senha">
+        
+        <button onclick="entrar()">Entrar</button>
+
+        <div id="mensagemRetorno" class="mensagem"></div>
+    </div>
+
+    <script>
+        async function entrar() {
+            const email = document.getElementById('emailLogin').value;
+            const senha = document.getElementById('senhaLogin').value;
+            const divMensagem = document.getElementById('mensagemRetorno');
+
+            if (!email || !senha) {
+                divMensagem.style.color = "red";
+                divMensagem.textContent = "Preencha e-mail e senha!";
+                return;
+            }
+
+            // Pacote apenas com o que importa para o login
+            const dadosLogin = {
+                email: email,
+                senha: senha
+            };
+
+            try {
+                const resposta = await fetch('http://localhost:8080/usuarios/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosLogin)
+                });
+
+                // O texto que o Spring Boot mandou de volta (ex: "Bem-vindo(a)..." ou "E-mail incorreto...")
+                const textoResposta = await resposta.text();
+
+                if (resposta.ok) {
+                    divMensagem.style.color = "green";
+                    divMensagem.textContent = textoResposta;
+                    
+                    // Aqui simularíamos a entrada no sistema redirecionando para outra página:
+                    // setTimeout(() => { window.location.href = "painel.html"; }, 1500);
+                } else {
+                    divMensagem.style.color = "red";
+                    divMensagem.textContent = textoResposta;
+                }
+            } catch (erro) {
+                divMensagem.style.color = "red";
+                divMensagem.textContent = "Erro de conexão com o servidor.";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -2,65 +2,78 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Meu Front de Teste</title>
+    <title>Teste de Cadastro - Adega</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
-        .formulario { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; width: 300px; }
-        input { display: block; margin-bottom: 10px; width: 90%; padding: 5px; }
-        button { padding: 5px 15px; cursor: pointer; }
+        .formulario { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; width: 300px; border-radius: 5px; }
+        input { display: block; margin-bottom: 10px; width: 90%; padding: 8px; border: 1px solid #999; border-radius: 3px; }
+        button { padding: 8px 15px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 3px; width: 97%; }
+        button:hover { background-color: #218838; }
     </style>
 </head>
 <body>
 
-    <h2>Cadastro de Usuário (Teste)</h2>
+    <h2>Cadastro de Funcionário/Cliente</h2>
     
     <div class="formulario">
-        <input type="text" id="nomeInput" placeholder="Digite o Nome">
-        <input type="text" id="emailInput" placeholder="Digite o Email">
-        <button onclick="salvarDados()">Enviar para o Back-end</button>
+        <input type="email" id="emailInput" placeholder="E-mail">
+        <input type="text" id="cpfInput" placeholder="CPF (Apenas números)">
+        <input type="password" id="senhaInput" placeholder="Senha">
+        <input type="password" id="confirmaSenhaInput" placeholder="Confirme a Senha">
+        
+        <button onclick="salvarDados()">Cadastrar no Sistema</button>
     </div>
 
-    <h3>Dados no Banco (H2):</h3>
-    <ul id="listaUsuarios"></ul>
-
     <script>
-        // Função que pega os dados dos inputs e manda para o Spring Boot (POST)
         async function salvarDados() {
-            const nome = document.getElementById('nomeInput').value;
+            // 1. Captura os valores digitados
             const email = document.getElementById('emailInput').value;
+            const cpf = document.getElementById('cpfInput').value;
+            const senha = document.getElementById('senhaInput').value;
+            const confirmaSenha = document.getElementById('confirmaSenhaInput').value;
 
-            // Envia a requisição para a porta 8080 (onde o Spring Boot roda)
-            await fetch('http://localhost:8080/usuarios', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ nome: nome, email: email })
-            });
+            // 2. Validação simples no Front-end
+            if (!email || !cpf || !senha) {
+                alert("Por favor, preencha os campos obrigatórios.");
+                return;
+            }
 
-            alert("Enviado! Verifique a lista.");
-            document.getElementById('nomeInput').value = ''; // limpa o input
-            document.getElementById('emailInput').value = ''; // limpa o input
-            buscarDados(); // Atualiza a lista na tela
+            if (senha !== confirmaSenha) {
+                alert("As senhas não coincidem! Digite novamente.");
+                return; // Para a execução aqui e não envia pro Back-end
+            }
+
+            // 3. Monta o pacote de dados (JSON) para enviar ao Java
+            // Nota: O banco exige 'username', então estamos mandando o email no lugar dele por enquanto.
+            const pacoteDeDados = {
+                username: email, 
+                cpf: cpf,
+                senha: senha,
+                email: email
+            };
+
+            // 4. Envia para o Spring Boot
+            try {
+                const resposta = await fetch('http://localhost:8080/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pacoteDeDados)
+                });
+
+                if (resposta.ok) {
+                    alert("Cadastro realizado com sucesso na Adega!");
+                    // Limpa os campos após o sucesso
+                    document.getElementById('emailInput').value = '';
+                    document.getElementById('cpfInput').value = '';
+                    document.getElementById('senhaInput').value = '';
+                    document.getElementById('confirmaSenhaInput').value = '';
+                } else {
+                    alert("Erro ao cadastrar. Verifique o console do Spring Boot.");
+                }
+            } catch (erro) {
+                alert("Erro de conexão com o Back-end!");
+            }
         }
-
-        // Função que busca os dados no Spring Boot (GET) e joga na tela
-        async function buscarDados() {
-            const resposta = await fetch('http://localhost:8080/usuarios');
-            const usuarios = await resposta.json();
-
-            const lista = document.getElementById('listaUsuarios');
-            lista.innerHTML = ''; // Limpa a lista antes de preencher
-
-            usuarios.forEach(usuario => {
-                const item = document.createElement('li');
-                item.textContent = `ID: ${usuario.id} | Nome: ${usuario.nome} | Email: ${usuario.email}`;
-                lista.appendChild(item);
-            });
-        }
-
-        // Já chama a função para listar os dados assim que abrir a página
-        buscarDados();
     </script>
 </body>
 </html>
