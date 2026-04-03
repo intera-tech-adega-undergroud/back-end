@@ -18,6 +18,8 @@ public class UnidadeBebida {
     @JoinColumn(name = "id_produto")
     private Produto produto;
 
+    public UnidadeBebida() {}
+
     public UnidadeBebida(Integer idUnidadeBebida, String mlInicial, Integer mlAtual, StatusBebida status, Produto produto) {
         this.idUnidadeBebida = idUnidadeBebida;
         this.mlInicial = mlInicial;

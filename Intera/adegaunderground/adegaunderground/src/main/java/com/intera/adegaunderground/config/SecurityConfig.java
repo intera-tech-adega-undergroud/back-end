@@ -1,0 +1,23 @@
+package com.intera.adegaunderground.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable()) // Necessário para aceitar requisições do React
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/funcionarios/**").permitAll() // Libera apenas a rota de funcionários
+                        .anyRequest().authenticated() // Bloqueia todo o resto do sistema
+                );
+        return http.build();
+    }
+}
