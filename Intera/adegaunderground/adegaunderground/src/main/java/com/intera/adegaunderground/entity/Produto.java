@@ -14,6 +14,8 @@ public class Produto {
     @Enumerated(EnumType.STRING)
     private Embalagem embalagem;
     private Integer volumeMl;
+    private Integer qtdMinima;
+    private Integer qtdUnidade;
 
     @ManyToOne
     @JoinColumn(name = "id_categoria")
@@ -67,11 +69,18 @@ public class Produto {
         this.volumeMl = volumeMl;
     }
 
-    public Categoria getCategoria() {
-        return categoria;
-    }
+    public Categoria getCategoria() { return categoria; }
 
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
     }
+
+    public Integer getQtdMinima() { return qtdMinima; }
+
+    public void setQtdMinima(Integer qtdMinima) { this.qtdMinima = qtdMinima; }
+
+    public Integer getQtdUnidade() { return qtdUnidade; }
+
+    public void setQtdUnidade(Integer qtdUnidade) { this.qtdUnidade = qtdUnidade; }
 }
+
