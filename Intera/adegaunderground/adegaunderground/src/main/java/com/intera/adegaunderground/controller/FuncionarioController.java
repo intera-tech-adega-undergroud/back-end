@@ -17,10 +17,21 @@ public class FuncionarioController {
     @Autowired
     private FuncionarioRepository repository;
 
-    // INJETAMOS O SERVIÇO AQUI
     @Autowired
     private TokenService tokenService;
 
+    // --- ROTA NOVA: PARA CADASTRAR O DONO DO ERP ---
+    @PostMapping
+    public ResponseEntity<String> cadastrar(@RequestBody Funcionario novoFuncionario) {
+        try {
+            repository.save(novoFuncionario);
+            return ResponseEntity.status(201).body("Cliente (Admin) cadastrado com sucesso!");
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Erro ao cadastrar: E-mail ou CPF já existem.");
+        }
+    } // Fim do método de cadastrar
+
+    // --- ROTA ANTIGA QUE JÁ ESTAVA AÍ: LOGIN ---
     @PostMapping("/login")
     public ResponseEntity<String> fazerLogin(@RequestBody Funcionario tentativaLogin) {
 
@@ -38,5 +49,5 @@ public class FuncionarioController {
         } else {
             return ResponseEntity.status(401).body("E-mail ou senha incorretos!");
         }
-    }
+    } // Fim do método de login
 }
