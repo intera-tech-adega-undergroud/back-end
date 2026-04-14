@@ -6,28 +6,20 @@ import jakarta.validation.constraints.NotNull;
 @Entity
 @Table(name = "tbl_combo")
 public class Combo {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer idCombo;
 
-    @NotNull(message = "Combo é obrigatório")
+    @Id
     @ManyToOne
-    @JoinColumn(name = "id_produto_pai")
-    private Produto produtoPai; // O Produto do tipo 'COMBO'
+    @JoinColumn(name = "tbl_produto_id_combo")
+    private Produto produtoPai;
 
-    @NotNull(message = "Item é obrigatório")
+    @Id
     @ManyToOne
-    @JoinColumn(name = "id_produto_filho")
-    private Produto produtoFilho; // Os itens dentro do combo (ex: Gelo, Suco)
+    @JoinColumn(name = "tbl_produto_id_produto")
+    private Produto produtoFilho;
+
     @NotNull(message = "Quantidade é obrigatório")
+    @Column(name = "quantidade_produto")
     private Integer quantidade;
-
-    public Integer getIdCombo() {
-        return idCombo;
-    }
-
-    public void setIdCombo(Integer idCombo) {
-        this.idCombo = idCombo;
-    }
 
     public Produto getProdutoPai() {
         return produtoPai;

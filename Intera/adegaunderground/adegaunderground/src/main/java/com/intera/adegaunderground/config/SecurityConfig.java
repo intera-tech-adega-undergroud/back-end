@@ -21,7 +21,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ATIVA O CORS GLOBAL
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/funcionarios/**").permitAll() // Libera cadastro e login
+                        .requestMatchers("/funcionarios/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**")
+                        .permitAll() // Libera cadastro e login
                         .anyRequest().authenticated()
                 );
         return http.build();
