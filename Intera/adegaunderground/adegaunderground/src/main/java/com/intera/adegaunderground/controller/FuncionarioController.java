@@ -3,6 +3,9 @@ package com.intera.adegaunderground.controller;
 import com.intera.adegaunderground.config.TokenService;
 import com.intera.adegaunderground.entity.Funcionario;
 import com.intera.adegaunderground.repository.FuncionarioRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,11 @@ public class FuncionarioController {
     private TokenService tokenService;
 
     // --- ROTA NOVA: PARA CADASTRAR O DONO DO ERP ---
+    @Operation(summary = "Cadastrar um novo funcionário (Admin)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Funcionário cadastrado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Erro ao cadastrar (email ou CPF duplicado)")
+    })
     @PostMapping
     public ResponseEntity<String> cadastrar(@RequestBody Funcionario novoFuncionario) {
         try {
@@ -32,6 +40,11 @@ public class FuncionarioController {
     } // Fim do método de cadastrar
 
     // --- ROTA ANTIGA QUE JÁ ESTAVA AÍ: LOGIN ---
+    @Operation(summary = "Realizar login do funcionário")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login realizado com sucesso (retorna token JWT)"),
+            @ApiResponse(responseCode = "401", description = "E-mail ou senha incorretos")
+    })
     @PostMapping("/login")
     public ResponseEntity<String> fazerLogin(@RequestBody Funcionario tentativaLogin) {
 
