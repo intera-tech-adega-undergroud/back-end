@@ -30,4 +30,18 @@ public class TokenService {
             throw new RuntimeException("Erro ao gerar o token JWT", e);
         }
     }
+
+    public String validarToken(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+
+            return JWT.require(algorithm)
+                    .withIssuer("AdegaUnderground")
+                    .build()
+                    .verify(token)
+                    .getSubject();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
