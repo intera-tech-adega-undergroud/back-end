@@ -22,7 +22,7 @@ public class Produto {
     @Schema(description = "Indica se o produto está ativo", example = "true")
     private Boolean ativo;
 
-    @Enumerated(EnumType.STRING)
+    //@Enumerated(EnumType.STRING)
     @Schema(description = "Tipo de embalagem do produto", example = "LATA")
     private Embalagem embalagem;
 
@@ -30,7 +30,7 @@ public class Produto {
     private Integer volumeMl;
 
     @Schema(description = "Quantidade mínima em estoque para alerta", example = "10")
-    private Integer qtdMinima;
+    private Integer qtdMinimo;
 
     @Schema(description = "Quantidade atual em unidades no estoque", example = "50")
     private Integer qtdUnidade;
@@ -96,12 +96,12 @@ public class Produto {
         this.categoria = categoria;
     }
 
-    public Integer getQtdMinima() {
-        return qtdMinima;
+    public Integer getQtdMinimo() {
+        return qtdMinimo;
     }
 
-    public void setQtdMinima(Integer qtdMinima) {
-        this.qtdMinima = qtdMinima;
+    public void setQtdMinimo(Integer qtdMinimo) {
+        this.qtdMinimo = qtdMinimo;
     }
 
     public Integer getQtdUnidade() {

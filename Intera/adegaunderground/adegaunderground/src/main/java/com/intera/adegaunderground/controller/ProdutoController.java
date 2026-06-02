@@ -1,6 +1,9 @@
 package com.intera.adegaunderground.controller;
 
+import com.intera.adegaunderground.dto.ProdutoRequestDTO;
+import com.intera.adegaunderground.entity.Categoria;
 import com.intera.adegaunderground.entity.Produto;
+import com.intera.adegaunderground.repository.CategoriaRepository;
 import com.intera.adegaunderground.repository.ProdutoRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,9 @@ public class ProdutoController {
 
     @Autowired
     private ProdutoRepository produtoRepository;
+
+    @Autowired
+    private CategoriaRepository categoriaRepository;
 
     @GetMapping
     public ResponseEntity<List<Produto>> listarProdutos() {
@@ -37,13 +43,18 @@ public class ProdutoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizar(@PathVariable Integer id, @Valid @RequestBody Produto produto) {
+    public ResponseEntity<?> atualizar(@PathVariable Integer id, @Valid @RequestBody ProdutoRequestDTO produto) {
+
+        Categoria categoria = categoriaRepository.findByCategoria(produto.getCategoria());
+
         return produtoRepository.findById(id)
                 .map(produtoExistente -> {
                     produtoExistente.setNome(produto.getNome());
                     produtoExistente.setPreco(produto.getPreco());
-                    produtoExistente.setAtivo(produto.getAtivo());
-                    produtoExistente.setQtdMinima(produto.getQtdMinima());
+                    produtoExistente.setQtdMinimo(produto.getQtdMinima());
+                    produtoExistente.setVolumeMl(produto.getVolumeMl());
+                    produtoExistente.setEmbalagem(produto.getEmbalagem());
+                    produtoExistente.setCategoria(categoria);
 
                     Produto atualizado = produtoRepository.save(produtoExistente);
                     return ResponseEntity.ok(atualizado);
@@ -52,9 +63,23 @@ public class ProdutoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> cadastrar(@Valid @RequestBody Produto produto) {
-        Produto novoProduto = produtoRepository.save(produto);
-        return ResponseEntity.status(201).body(novoProduto);
+    public ResponseEntity<?> cadastrar(@Valid @RequestBody ProdutoRequestDTO produto) {
+
+        Categoria categoria = categoriaRepository.findByCategoria(produto.getCategoria());
+
+        Produto novoProduto = new Produto();
+
+        novoProduto.setAtivo(true);
+        novoProduto.setEmbalagem(produto.getEmbalagem());
+        novoProduto.setCategoria(categoria);
+        novoProduto.setPreco(produto.getPreco());
+        novoProduto.setNome(produto.getNome());
+        novoProduto.setQtdUnidade(produto.getQtdUnidade());
+        novoProduto.setQtdMinimo(produto.getQtdMinima());
+        novoProduto.setVolumeMl(produto.getVolumeMl());
+
+        Produto novoProdutoResposta = produtoRepository.save(novoProduto);
+        return ResponseEntity.status(201).body(novoProdutoResposta);
     }
 
     @DeleteMapping("/{id}")

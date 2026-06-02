@@ -14,7 +14,7 @@ public class Categoria {
     private Integer idCategoria;
 
 
-    @Enumerated(EnumType.STRING)
+    //@Enumerated(EnumType.STRING)
     @NotNull(message = "Categoria é obrigatória")
     @Schema(
             description = "Tipo da categoria",
