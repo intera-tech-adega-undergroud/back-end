@@ -35,6 +35,9 @@ public class Produto {
     @Schema(description = "Quantidade atual em unidades no estoque", example = "50")
     private Integer qtdUnidade;
 
+    @Schema(description = "Valor de compra do produto", example = "2.50")
+    private Integer valorCompra;
+
     @ManyToOne
     @JoinColumn(name = "id_categoria")
     @Schema(description = "Categoria do produto")
@@ -110,5 +113,13 @@ public class Produto {
 
     public void setQtdUnidade(Integer qtdUnidade) {
         this.qtdUnidade = qtdUnidade;
+    }
+
+    public Integer getValorCompra() {
+        return valorCompra;
+    }
+
+    public void setValorCompra(Integer valorCompra) {
+        this.valorCompra = valorCompra;
     }
 }
