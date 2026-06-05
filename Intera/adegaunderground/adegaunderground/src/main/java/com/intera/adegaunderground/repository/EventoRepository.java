@@ -89,4 +89,27 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
             @Param("dataInicio") LocalDate dataInicio,
             @Param("dataFim") LocalDate dataFim
     );
+
+    @Query("""
+        SELECT e
+        FROM Evento e
+        WHERE e.cliente IS NOT NULL
+        ORDER BY e.dataHoraEvento DESC
+    """)
+    List<Evento> buscarFiados();
+
+    @Query("""
+        SELECT e
+        FROM Evento e
+        WHERE e.cliente IS NOT NULL
+          AND FUNCTION('DATE', e.dataHoraEvento)
+                BETWEEN :dataInicio AND :dataFim
+        ORDER BY e.dataHoraEvento DESC
+    """)
+    List<Evento> buscarFiadosPorPeriodo(
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim
+    );
+
+    Evento findFirstByCliente_IdClienteOrderByDataHoraEventoDesc(Integer idCliente);
 }
