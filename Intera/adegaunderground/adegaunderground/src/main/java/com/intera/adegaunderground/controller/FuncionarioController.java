@@ -1,6 +1,7 @@
 package com.intera.adegaunderground.controller;
 
 import com.intera.adegaunderground.config.TokenService;
+import com.intera.adegaunderground.dto.LoginResponseDTO;
 import com.intera.adegaunderground.entity.Funcionario;
 import com.intera.adegaunderground.repository.FuncionarioRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,21 +49,34 @@ public class FuncionarioController {
             @ApiResponse(responseCode = "401", description = "E-mail ou senha incorretos")
     })
     @PostMapping("/login")
-    public ResponseEntity<String> fazerLogin(@RequestBody Funcionario tentativaLogin) {
+    public ResponseEntity<LoginResponseDTO> fazerLogin(
+            @RequestBody Funcionario tentativaLogin
+    ) {
 
-        Optional<Funcionario> funcionarioEncontrado = repository.findByEmailAndSenhaCripto(
-                tentativaLogin.getEmail(),
-                tentativaLogin.getSenhaCripto()
-        );
+        Optional<Funcionario> funcionarioEncontrado =
+                repository.findByEmailAndSenhaCripto(
+                        tentativaLogin.getEmail(),
+                        tentativaLogin.getSenhaCripto()
+                );
 
         if (funcionarioEncontrado.isPresent()) {
-            // GERAMOS O TOKEN JWT!
-            String token = tokenService.gerarToken(funcionarioEncontrado.get());
 
-            // Devolvemos o token para o Front-end
-            return ResponseEntity.ok(token);
-        } else {
-            return ResponseEntity.status(401).body("E-mail ou senha incorretos!");
+            Funcionario funcionario =
+                    funcionarioEncontrado.get();
+
+            String token =
+                    tokenService.gerarToken(funcionario);
+
+            return ResponseEntity.ok(
+                    new LoginResponseDTO(
+                            token,
+                            funcionario.getIdFuncionario(),
+                            funcionario.getNomeUsuario(),
+                            "Funcionário"
+                    )
+            );
         }
+
+        return ResponseEntity.status(401).build();
     } // Fim do método de login
 }
