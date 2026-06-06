@@ -1,5 +1,6 @@
 package com.intera.adegaunderground.controller;
 
+import com.intera.adegaunderground.dto.FiadoDTO;
 import com.intera.adegaunderground.dto.VendaBigNumberDTO;
 import com.intera.adegaunderground.entity.Evento;
 import com.intera.adegaunderground.repository.EventoRepository;
@@ -7,16 +8,14 @@ import com.intera.adegaunderground.service.EventoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
 @RequestMapping("/eventos")
+@CrossOrigin(origins = "*")
 public class EventoController {
 
     @Autowired
@@ -27,7 +26,7 @@ public class EventoController {
 
     @GetMapping
     public ResponseEntity<List<Evento>> listar() {
-        return ResponseEntity.status(200).body(eventoRepository.findAll());
+        return ResponseEntity.ok(eventoRepository.findAll());
     }
 
     @GetMapping("/vendas-mes")
@@ -35,17 +34,14 @@ public class EventoController {
 
         try {
 
-            VendaBigNumberDTO dto = eventoService.buscarVendasMes();
+            VendaBigNumberDTO dto =
+                    eventoService.buscarVendasMes();
 
             if (dto == null) {
-                return ResponseEntity
-                        .status(HttpStatus.NO_CONTENT)
-                        .build();
+                return ResponseEntity.noContent().build();
             }
 
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(dto);
+            return ResponseEntity.ok(dto);
 
         } catch (Exception e) {
 
@@ -64,15 +60,10 @@ public class EventoController {
                     eventoService.buscarFaturamentoDia();
 
             if (dto == null) {
-
-                return ResponseEntity
-                        .status(HttpStatus.NO_CONTENT)
-                        .build();
+                return ResponseEntity.noContent().build();
             }
 
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(dto);
+            return ResponseEntity.ok(dto);
 
         } catch (Exception e) {
 
@@ -91,15 +82,10 @@ public class EventoController {
                     eventoService.buscarRankFuncionarios();
 
             if (lista == null || lista.isEmpty()) {
-
-                return ResponseEntity
-                        .status(HttpStatus.NO_CONTENT)
-                        .build();
+                return ResponseEntity.noContent().build();
             }
 
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(lista);
+            return ResponseEntity.ok(lista);
 
         } catch (Exception e) {
 
@@ -111,10 +97,8 @@ public class EventoController {
 
     @GetMapping("/grafico-dashboard")
     public ResponseEntity<?> buscarGraficoDash(
-
             @RequestParam LocalDate dataInicio,
             @RequestParam LocalDate dataFim
-
     ) {
 
         try {
@@ -126,10 +110,7 @@ public class EventoController {
                     );
 
             if (lista.isEmpty()) {
-
-                return ResponseEntity
-                        .noContent()
-                        .build();
+                return ResponseEntity.noContent().build();
             }
 
             return ResponseEntity.ok(lista);
@@ -146,5 +127,31 @@ public class EventoController {
                     .internalServerError()
                     .body("Erro interno do servidor");
         }
+    }
+
+    @GetMapping("/fiados")
+    public ResponseEntity<List<FiadoDTO>> listarFiados(
+
+            @RequestParam(required = false)
+            LocalDate dataInicio,
+
+            @RequestParam(required = false)
+            LocalDate dataFim
+
+    ) {
+
+        if (dataInicio != null && dataFim != null) {
+
+            return ResponseEntity.ok(
+                    eventoService.buscarFiadosPorPeriodo(
+                            dataInicio,
+                            dataFim
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                eventoService.buscarFiados()
+        );
     }
 }
