@@ -105,8 +105,8 @@ public class EventoService {
         return lista;
     }
 
-    public List<FiadoDTO> buscarFiados() {
-        List<Cliente> clientes = clienteRepository.findByCompraFiadoTrue();
+    public List<FiadoDTO> buscarTodosClientesFiado() {
+        List<Cliente> clientes = clienteRepository.findAll();
 
         List<FiadoDTO> lista = new ArrayList<>();
 
@@ -146,11 +146,11 @@ public class EventoService {
             LocalDate dataInicio,
             LocalDate dataFim
     ) {
-        return buscarFiados();
+        return buscarTodosClientesFiado();
     }
 
     public List<FiadoDTO> buscarTodosFiados() {
-        return buscarFiados();
+        return buscarTodosClientesFiado();
     }
 
     public void registrarPagamentoFiado(PagamentoFiadoDTO dto) {
@@ -177,7 +177,6 @@ public class EventoService {
 
         if (novoSaldo <= 0) {
             cliente.setSaldoDevedor(0.0);
-            cliente.setCompraFiado(false);
         }
 
         clienteRepository.save(cliente);
