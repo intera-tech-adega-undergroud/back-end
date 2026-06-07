@@ -1,5 +1,6 @@
 package com.intera.adegaunderground.controller;
 
+import com.intera.adegaunderground.dto.EntradaEstoqueDTO;
 import com.intera.adegaunderground.dto.ProdutoRequestDTO;
 import com.intera.adegaunderground.entity.Categoria;
 import com.intera.adegaunderground.entity.Produto;
@@ -91,4 +92,24 @@ public class ProdutoController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PatchMapping("/{id}/entrada")
+    public ResponseEntity<?> entradaEstoque(
+            @PathVariable Integer id,
+            @RequestBody @Valid EntradaEstoqueDTO entrada) {
+
+        return produtoRepository.findById(id)
+                .map(produto -> {
+
+                    produto.setQtdUnidade(
+                            produto.getQtdUnidade() + entrada.getQuantidade()
+                    );
+
+                    Produto produtoAtualizado = produtoRepository.save(produto);
+
+                    return ResponseEntity.ok(produtoAtualizado);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
+
