@@ -1,20 +1,22 @@
 package com.intera.adegaunderground.dto;
 
+import java.time.LocalDate;
+
 public class GraficoDashDTO {
 
-    private Integer dia;
+    private LocalDate data;
     private Double valorTotalVendas;
 
     public GraficoDashDTO(
-            Integer dia,
+            LocalDate data,
             Double valorTotalVendas
     ) {
-        this.dia = dia;
+        this.data = data;
         this.valorTotalVendas = valorTotalVendas;
     }
 
-    public Integer getDia() {
-        return dia;
+    public LocalDate getData() {
+        return data;
     }
 
     public Double getValorTotalVendas() {

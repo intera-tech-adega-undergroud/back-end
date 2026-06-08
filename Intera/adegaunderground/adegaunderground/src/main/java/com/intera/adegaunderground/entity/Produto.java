@@ -43,6 +43,10 @@ public class Produto {
     @Schema(description = "Categoria do produto")
     private Categoria categoria;
 
+    @ManyToOne
+    @JoinColumn(name = "id_produto_pai")
+    private Produto produtoPai;
+
     public Integer getIdProduto() {
         return idProduto;
     }
@@ -121,5 +125,13 @@ public class Produto {
 
     public void setValorCompra(Integer valorCompra) {
         this.valorCompra = valorCompra;
+    }
+
+    public Produto getProdutoPai() {
+        return produtoPai;
+    }
+
+    public void setProdutoPai(Produto produtoPai) {
+        this.produtoPai = produtoPai;
     }
 }

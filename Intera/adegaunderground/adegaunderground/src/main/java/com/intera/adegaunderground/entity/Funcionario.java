@@ -22,10 +22,6 @@ public class Funcionario {
     @Schema(description = "Senha criptografada do funcionário", example = "*****", accessMode = Schema.AccessMode.WRITE_ONLY)
     private String senhaCripto;
 
-    @NotBlank(message = "Nível de acesso é obrigatório")
-    @Schema(description = "Nível de acesso do funcionário", example = "ADMIN")
-    private String nivelAcesso;
-
     @NotBlank(message = "CPF é obrigatório")
     @Schema(description = "CPF do funcionário", example = "12345678900")
     private String cpf;
@@ -60,14 +56,6 @@ public class Funcionario {
 
     public void setSenhaCripto(String senhaCripto) {
         this.senhaCripto = senhaCripto;
-    }
-
-    public String getNivelAcesso() {
-        return nivelAcesso;
-    }
-
-    public void setNivelAcesso(String nivelAcesso) {
-        this.nivelAcesso = nivelAcesso;
     }
 
     public String getCpf() {

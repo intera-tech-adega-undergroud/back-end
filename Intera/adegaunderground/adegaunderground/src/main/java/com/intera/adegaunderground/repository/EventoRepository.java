@@ -69,21 +69,21 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     List<Object[]> buscarRankFuncionarios();
 
     @Query(value = """
-        SELECT 
-            DAY(e.data_hora_evento) AS dia,
-            SUM(
-                p.preco * ie.quantidade
-            ) AS valor_total_vendas
-        FROM tbl_evento e
-        INNER JOIN item_evento ie
-            ON e.id_evento = ie.id_evento
-        INNER JOIN tbl_produto p
-            ON ie.id_produto = p.id_produto
-        WHERE e.tipo = 'VENDA'
-            AND DATE(e.data_hora_evento)
-                BETWEEN :dataInicio AND :dataFim
-        GROUP BY DAY(e.data_hora_evento)
-        ORDER BY dia
+            SELECT
+                DATE(e.data_hora_evento) AS data,
+                SUM(
+                    p.preco * ie.quantidade
+                ) AS valor_total_vendas
+            FROM tbl_evento e
+            INNER JOIN item_evento ie
+                ON e.id_evento = ie.id_evento
+            INNER JOIN tbl_produto p
+                ON ie.id_produto = p.id_produto
+            WHERE e.tipo = 'VENDA'
+                AND DATE(e.data_hora_evento)
+                    BETWEEN :dataInicio AND :dataFim
+            GROUP BY DATE(e.data_hora_evento)
+            ORDER BY DATE(e.data_hora_evento)
         """, nativeQuery = true)
     List<Object[]> buscarGraficoDash(
             @Param("dataInicio") LocalDate dataInicio,

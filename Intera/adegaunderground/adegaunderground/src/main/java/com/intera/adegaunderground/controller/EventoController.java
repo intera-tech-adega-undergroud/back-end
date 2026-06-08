@@ -2,6 +2,7 @@ package com.intera.adegaunderground.controller;
 
 import com.intera.adegaunderground.dto.FiadoDTO;
 import com.intera.adegaunderground.dto.VendaBigNumberDTO;
+import com.intera.adegaunderground.dto.VendaDTO;
 import com.intera.adegaunderground.entity.Evento;
 import com.intera.adegaunderground.repository.EventoRepository;
 import com.intera.adegaunderground.service.EventoService;
@@ -153,5 +154,27 @@ public class EventoController {
         return ResponseEntity.ok(
                 eventoService.buscarFiados()
         );
+    }
+
+    @PostMapping("/venda")
+    public ResponseEntity<?> registrarVenda(
+            @RequestBody VendaDTO dto
+    ) {
+
+        try {
+
+            Evento evento =
+                    eventoService.salvarVenda(dto);
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(evento);
+
+        } catch (Exception e){
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
     }
 }
