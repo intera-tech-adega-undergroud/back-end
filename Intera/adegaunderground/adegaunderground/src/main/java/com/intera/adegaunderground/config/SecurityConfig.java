@@ -76,6 +76,14 @@ public class SecurityConfig {
                                 "/clientes/**"
                         ).authenticated()
 
+                        .requestMatchers(
+                                "/funcionarios/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/notas-fiscais/**"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 
