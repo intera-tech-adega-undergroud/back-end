@@ -22,8 +22,6 @@ public class TokenService {
             return JWT.create()
                     .withIssuer("AdegaUnderground") // Quem emitiu
                     .withSubject(funcionario.getEmail()) // De quem é o crachá
-                    .withClaim("nivel", "ADMIN")
-                    //.withClaim("nivel", funcionario.getNivelAcesso()) // Guardamos o nível (ex: GERENTE)
                     .withExpiresAt(LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"))) // Expira em 2 horas
                     .sign(algorithm); // Assina e tranca
 
