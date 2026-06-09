@@ -61,6 +61,29 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/fiados/pagamento"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/clientes"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/fiados/**",
+                                "/clientes/**"
+                        ).authenticated()
+
+                        .requestMatchers(
+                                "/funcionarios/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/notas-fiscais/**"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 
@@ -72,7 +95,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // AQUI NÓS DIZEMOS EXATAMENTE QUEM PODE ENTRAR
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
 
@@ -88,6 +110,7 @@ public class SecurityConfig {
                         "GET",
                         "POST",
                         "PUT",
+                        "PATCH",
                         "DELETE",
                         "OPTIONS"
                 )
