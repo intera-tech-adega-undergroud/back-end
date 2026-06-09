@@ -2,8 +2,10 @@ package com.intera.adegaunderground.service;
 
 import com.intera.adegaunderground.dto.*;
 import com.intera.adegaunderground.entity.*;
+import com.intera.adegaunderground.observer.EstoqueNotifier;
 import com.intera.adegaunderground.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,12 @@ public class EventoService {
 
     @Autowired
     private ComboRepository comboRepository;
+
+    private final EstoqueNotifier estoqueNotifier;
+
+    public EventoService(EstoqueNotifier estoqueNotifier) {
+        this.estoqueNotifier = estoqueNotifier;
+    }
 
     public VendaBigNumberDTO buscarVendasMes() {
         var resultadoQuery = eventoRepository.buscarVendasMes();
@@ -377,6 +385,8 @@ public class EventoService {
                         produtoRepository.save(
                                 produtoControle
                         );
+
+                        verificarEstoque(produtoControle);
                     }
 
                     System.out.println(
@@ -429,6 +439,8 @@ public class EventoService {
                     produtoRepository.save(
                             produtoControle
                     );
+
+                    verificarEstoque(produtoControle);
 
                     System.out.println(
                             "[DEBUG] Unidade virtual criada. ID="
@@ -540,6 +552,8 @@ public class EventoService {
 
             produtoRepository.save(produto);
 
+            verificarEstoque(produto);
+
             return;
         }
 
@@ -551,5 +565,21 @@ public class EventoService {
                 produtoControle,
                 quantidade
         );
+    }
+
+    private void verificarEstoque(
+            Produto produto
+    ) {
+
+        if (
+                produto.getQtdUnidade()
+                        <=
+                        produto.getQtdMinimo()
+        ) {
+
+            estoqueNotifier.notificarObservers(
+                    produto
+            );
+        }
     }
 }
