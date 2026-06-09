@@ -150,8 +150,8 @@ public class EventoService {
         return lista;
     }
 
-    public List<FiadoDTO> buscarFiados() {
-        List<Cliente> clientes = clienteRepository.findByCompraFiadoTrue();
+    public List<FiadoDTO> buscarTodosClientesFiado() {
+        List<Cliente> clientes = clienteRepository.findAll();
 
         List<FiadoDTO> lista = new ArrayList<>();
 
@@ -162,12 +162,25 @@ public class EventoService {
                             cliente.getIdCliente()
                     );
 
+            String dataVenda = ultimoEvento != null && ultimoEvento.getDataHoraEvento() != null
+                    ? ultimoEvento.getDataHoraEvento().toLocalDate().format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            )
+                    : "-";
+
+            Double saldoDevedor = cliente.getSaldoDevedor() != null
+                    ? cliente.getSaldoDevedor()
+                    : 0.0;
+
+            String status = saldoDevedor <= 0 ? "Pago" : "Em Aberto";
+
             lista.add(new FiadoDTO(
                     cliente.getIdCliente(),
                     cliente.getNome(),
-                    cliente.getSaldoDevedor(),
-                    ultimoEvento != null ? ultimoEvento.getDataHoraEvento() : null,
-                    cliente.getSaldoDevedor() <= 0
+                    saldoDevedor,
+                    dataVenda,
+                    status,
+                    new ArrayList<>()
             ));
         }
 
@@ -178,11 +191,45 @@ public class EventoService {
             LocalDate dataInicio,
             LocalDate dataFim
     ) {
-        return buscarFiados();
+        return buscarTodosClientesFiado();
     }
 
     public List<FiadoDTO> buscarTodosFiados() {
-        return buscarFiados();
+        return buscarTodosClientesFiado();
+    }
+
+    public void registrarPagamentoFiado(PagamentoFiadoDTO dto) {
+        Cliente cliente = clienteRepository.findById(dto.getIdCliente())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        Double saldoAtual = cliente.getSaldoDevedor() != null
+                ? cliente.getSaldoDevedor()
+                : 0.0;
+
+        Double valorPagamento = dto.getValorPagamento();
+
+        if (valorPagamento == null || valorPagamento <= 0) {
+            throw new RuntimeException("Valor de pagamento inválido");
+        }
+
+        if (valorPagamento > saldoAtual) {
+            throw new RuntimeException("Valor de pagamento maior que a dívida");
+        }
+
+        Double novoSaldo = saldoAtual - valorPagamento;
+
+        cliente.setSaldoDevedor(novoSaldo);
+
+        if (novoSaldo <= 0) {
+            cliente.setSaldoDevedor(0.0);
+        }
+
+        clienteRepository.save(cliente);
+
+        System.out.println("Pagamento fiado registrado");
+        System.out.println("Cliente: " + cliente.getNome());
+        System.out.println("Valor pago: " + valorPagamento);
+        System.out.println("Forma de pagamento: " + dto.getFormaPagamento());
     }
 
     private Double calcularTotal(VendaDTO dto){

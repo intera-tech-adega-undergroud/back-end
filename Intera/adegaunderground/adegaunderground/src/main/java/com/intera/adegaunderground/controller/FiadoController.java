@@ -1,6 +1,7 @@
 package com.intera.adegaunderground.controller;
 
 import com.intera.adegaunderground.dto.FiadoDTO;
+import com.intera.adegaunderground.dto.PagamentoFiadoDTO;
 import com.intera.adegaunderground.service.EventoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,7 +21,6 @@ public class FiadoController {
 
     @GetMapping
     public ResponseEntity<List<FiadoDTO>> listarFiados(
-
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate dataInicio,
@@ -28,23 +28,17 @@ public class FiadoController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate dataFim
-
     ) {
-
-        // Sem filtro de datas
         if (dataInicio == null || dataFim == null) {
-
-            return ResponseEntity.ok(
-                    eventoService.buscarFiados()
-            );
+            return ResponseEntity.ok(eventoService.buscarTodosClientesFiado());
         }
 
-        // Filtro de datas
-        return ResponseEntity.ok(
-                eventoService.buscarFiadosPorPeriodo(
-                        dataInicio,
-                        dataFim
-                )
-        );
+        return ResponseEntity.ok(eventoService.buscarFiadosPorPeriodo(dataInicio, dataFim));
+    }
+
+    @PostMapping("/pagamento")
+    public ResponseEntity<Void> pagarFiado(@RequestBody PagamentoFiadoDTO dto) {
+        eventoService.registrarPagamentoFiado(dto);
+        return ResponseEntity.ok().build();
     }
 }

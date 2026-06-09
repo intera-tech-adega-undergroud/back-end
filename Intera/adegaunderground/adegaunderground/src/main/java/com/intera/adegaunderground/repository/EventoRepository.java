@@ -111,5 +111,51 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
             @Param("dataFim") LocalDate dataFim
     );
 
+    @Query(value = """
+        SELECT 
+            c.id_cliente AS id_cliente,
+            c.nome AS cliente,
+            COALESCE(c.saldo_devedor, 0) AS valor,
+            MAX(e.data_hora_evento) AS data,
+            CASE 
+                WHEN COALESCE(c.saldo_devedor, 0) > 0 THEN 'Em Aberto'
+                ELSE 'Pago'
+            END AS status
+        FROM tbl_cliente c
+        LEFT JOIN tbl_evento e
+            ON e.tbl_cliente_id_cliente = c.id_cliente
+        GROUP BY 
+            c.id_cliente,
+            c.nome,
+            c.saldo_devedor
+        ORDER BY c.nome
+        """, nativeQuery = true)
+    List<Object[]> buscarTodosClientesFiado();
+
+    @Query(value = """
+        SELECT 
+            c.id_cliente AS id_cliente,
+            c.nome AS cliente,
+            COALESCE(c.saldo_devedor, 0) AS valor,
+            MAX(e.data_hora_evento) AS data,
+            CASE 
+                WHEN COALESCE(c.saldo_devedor, 0) > 0 THEN 'Em Aberto'
+                ELSE 'Pago'
+            END AS status
+        FROM tbl_cliente c
+        LEFT JOIN tbl_evento e
+            ON e.tbl_cliente_id_cliente = c.id_cliente
+            AND DATE(e.data_hora_evento) BETWEEN :dataInicio AND :dataFim
+        GROUP BY 
+            c.id_cliente,
+            c.nome,
+            c.saldo_devedor
+        ORDER BY c.nome
+        """, nativeQuery = true)
+    List<Object[]> buscarTodosClientesFiadoPorPeriodo(
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim
+    );
+
     Evento findFirstByCliente_IdClienteOrderByDataHoraEventoDesc(Integer idCliente);
 }

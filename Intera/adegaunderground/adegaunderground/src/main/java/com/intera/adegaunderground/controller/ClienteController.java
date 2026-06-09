@@ -57,7 +57,17 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<?> cadastrar(@Valid @RequestBody Cliente cliente) {
+
+        if (cliente.getCompraFiado() == null) {
+            cliente.setCompraFiado(false);
+        }
+
+        if (cliente.getSaldoDevedor() == null) {
+            cliente.setSaldoDevedor(0.0);
+        }
+
         Cliente novoCliente = clienteRepository.save(cliente);
+
         return ResponseEntity.status(201).body(novoCliente);
     }
 
@@ -70,4 +80,5 @@ public class ClienteController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
 }

@@ -152,7 +152,7 @@ public class EventoController {
         }
 
         return ResponseEntity.ok(
-                eventoService.buscarFiados()
+                eventoService.buscarTodosClientesFiado()
         );
     }
 

@@ -19,7 +19,11 @@ public class Funcionario {
     private String nomeUsuario;
 
     @NotBlank(message = "Senha é obrigatório")
-    @Schema(description = "Senha criptografada do funcionário", example = "*****", accessMode = Schema.AccessMode.WRITE_ONLY)
+    @Schema(
+            description = "Senha criptografada do funcionário",
+            example = "*****",
+            accessMode = Schema.AccessMode.WRITE_ONLY
+    )
     private String senhaCripto;
 
     @NotBlank(message = "CPF é obrigatório")
