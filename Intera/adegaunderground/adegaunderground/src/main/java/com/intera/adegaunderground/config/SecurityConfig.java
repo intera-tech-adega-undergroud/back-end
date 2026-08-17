@@ -1,7 +1,7 @@
 package com.intera.adegaunderground.config;
 
-import jakarta.servlet.Filter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,16 +15,21 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Autowired
-    private TokenService tokenService;
-
-    @Autowired
     private JwtFilter jwtFilter;
+
+        @Value("${app.security.swagger-public:false}")
+        private boolean swaggerPublic;
+
+        @Value("${app.security.cors.allowed-origins:http://localhost:5173}")
+        private String allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -47,45 +52,41 @@ public class SecurityConfig {
                         )
                 )
 
-                .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                            HttpMethod.OPTIONS,
+                            "/**"
+                    ).permitAll();
 
-                        .requestMatchers(
-                                HttpMethod.OPTIONS,
-                                "/**"
-                        ).permitAll()
+                    auth.requestMatchers(
+                            HttpMethod.POST,
+                            "/funcionarios/login",
+                            "/clientes"
+                    ).permitAll();
 
-                        .requestMatchers(
-                                "/funcionarios/**",
+                    if (swaggerPublic) {
+                        auth.requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/fiados/pagamento"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/clientes"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                "/fiados/**",
-                                "/clientes/**"
-                        ).authenticated()
-
-                        .requestMatchers(
-                                "/funcionarios/**",
+                        ).permitAll();
+                    } else {
+                        auth.requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/notas-fiscais/**"
-                        ).permitAll()
+                                "/v3/api-docs/**"
+                        ).authenticated();
+                    }
 
-                        .anyRequest().authenticated()
-                )
+                    auth.requestMatchers(
+                            "/fiados/**",
+                            "/clientes/**",
+                            "/funcionarios/**",
+                            "/notas-fiscais/**"
+                    ).authenticated();
+
+                    auth.anyRequest().authenticated();
+                })
 
                 .addFilterBefore(
                         jwtFilter,
@@ -101,9 +102,12 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                Arrays.asList("http://localhost:5173")
-        );
+        List<String> parsedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .collect(Collectors.toList());
+
+        configuration.setAllowedOrigins(parsedOrigins);
 
         configuration.setAllowedMethods(
                 Arrays.asList(

@@ -17,7 +17,6 @@ import java.util.Optional;
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/funcionarios")
-@CrossOrigin(origins = "*")
 public class FuncionarioController {
 
     @Autowired

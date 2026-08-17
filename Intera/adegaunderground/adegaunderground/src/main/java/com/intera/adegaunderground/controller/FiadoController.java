@@ -13,7 +13,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/fiados")
-@CrossOrigin(origins = "*")
 public class FiadoController {
 
     @Autowired

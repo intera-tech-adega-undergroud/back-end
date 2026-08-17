@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/notas-fiscais")
-@CrossOrigin(origins = "*")
 public class NotaFiscalController {
 
     @Autowired
