@@ -1,15 +1,19 @@
 package com.intera.adegaunderground.controller;
 
 import com.intera.adegaunderground.config.TokenService;
+import com.intera.adegaunderground.dto.FuncionarioCadastroDTO;
+import com.intera.adegaunderground.dto.FuncionarioResponseDTO;
 import com.intera.adegaunderground.dto.LoginResponseDTO;
 import com.intera.adegaunderground.entity.Funcionario;
-import com.intera.adegaunderground.repository.FuncionarioRepository;
+import com.intera.adegaunderground.service.FuncionarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -20,28 +24,35 @@ import java.util.Optional;
 public class FuncionarioController {
 
     @Autowired
-    private FuncionarioRepository repository;
+    private FuncionarioService funcionarioService;
 
     @Autowired
     private TokenService tokenService;
 
-    // --- ROTA NOVA: PARA CADASTRAR O DONO DO ERP ---
-    @Operation(summary = "Cadastrar um novo funcionário (Admin)")
+    @Operation(summary = "Cadastrar um novo funcionário com suas permissões")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Funcionário cadastrado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Erro ao cadastrar (email ou CPF duplicado)")
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para cadastrar ou conceder as permissões"),
+            @ApiResponse(responseCode = "409", description = "E-mail ou CPF já cadastrados")
     })
     @PostMapping
-    public ResponseEntity<String> cadastrar(@RequestBody Funcionario novoFuncionario) {
-        try {
-            repository.save(novoFuncionario);
-            return ResponseEntity.status(201).body("Cliente (Admin) cadastrado com sucesso!");
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body("Erro ao cadastrar: E-mail ou CPF já existem.");
-        }
-    } // Fim do método de cadastrar
+    public ResponseEntity<FuncionarioResponseDTO> cadastrar(
+            @Valid @RequestBody FuncionarioCadastroDTO dto,
+            Authentication authentication
+    ) {
+        Funcionario criado = funcionarioService.cadastrar(dto, authentication.getName());
 
-    // --- ROTA ANTIGA QUE JÁ ESTAVA AÍ: LOGIN ---
+        return ResponseEntity.status(201).body(
+                new FuncionarioResponseDTO(
+                        criado.getIdFuncionario(),
+                        criado.getNomeUsuario(),
+                        criado.getEmail(),
+                        funcionarioService.nomesDasPermissoes(criado)
+                )
+        );
+    }
+
     @Operation(summary = "Realizar login do funcionário")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login realizado com sucesso (retorna token JWT)"),
@@ -51,27 +62,22 @@ public class FuncionarioController {
     public ResponseEntity<LoginResponseDTO> fazerLogin(
             @RequestBody Funcionario tentativaLogin
     ) {
-
         Optional<Funcionario> funcionarioEncontrado =
-                repository.findByEmailAndSenhaCripto(
+                funcionarioService.autenticar(
                         tentativaLogin.getEmail(),
                         tentativaLogin.getSenhaCripto()
                 );
 
         if (funcionarioEncontrado.isPresent()) {
-
-            Funcionario funcionario =
-                    funcionarioEncontrado.get();
-
-            String token =
-                    tokenService.gerarToken(funcionario);
+            Funcionario funcionario = funcionarioEncontrado.get();
 
             return ResponseEntity.ok(
                     new LoginResponseDTO(
-                            token,
+                            tokenService.gerarToken(funcionario),
                             funcionario.getIdFuncionario(),
                             funcionario.getNomeUsuario(),
-                            "Funcionário"
+                            "Funcionário",
+                            funcionarioService.nomesDasPermissoes(funcionario)
                     )
             );
         }
