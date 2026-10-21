@@ -1,8 +1,13 @@
 package com.intera.adegaunderground.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "tbl_funcionario")
@@ -24,6 +29,7 @@ public class Funcionario {
             example = "*****",
             accessMode = Schema.AccessMode.WRITE_ONLY
     )
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String senhaCripto;
 
     @NotBlank(message = "CPF é obrigatório")
@@ -37,6 +43,23 @@ public class Funcionario {
     @NotBlank(message = "Email é obrigatório")
     @Schema(description = "Email do funcionário", example = "admin@adega.com")
     private String email;
+
+    @JsonIgnore
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "permissao_funcionario",
+            joinColumns = @JoinColumn(name = "tbl_funcionario_id_funcionario"),
+            inverseJoinColumns = @JoinColumn(name = "dmsao_permissao_id_permissao")
+    )
+    private Set<Permissao> permissoes = new HashSet<>();
+
+    public Set<Permissao> getPermissoes() {
+        return permissoes;
+    }
+
+    public void setPermissoes(Set<Permissao> permissoes) {
+        this.permissoes = permissoes;
+    }
 
     public Integer getIdFuncionario() {
         return idFuncionario;

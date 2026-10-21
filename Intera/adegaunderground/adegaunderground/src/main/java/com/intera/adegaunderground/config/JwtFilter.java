@@ -1,5 +1,7 @@
 package com.intera.adegaunderground.config;
 
+import com.intera.adegaunderground.entity.Funcionario;
+import com.intera.adegaunderground.repository.FuncionarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -19,7 +23,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -34,6 +39,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
     private TokenService tokenService;
+
+    @Autowired
+    private FuncionarioRepository funcionarioRepository;
 
     @Value("${app.security.swagger-public:false}")
     private boolean swaggerPublic;
@@ -69,11 +77,24 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 if (email != null) {
 
+                    Optional<Funcionario> funcionario = funcionarioRepository.findByEmail(email);
+
+                    if (funcionario.isEmpty()) {
+                        securityLogger.warn("Token de usuário inexistente na rota {}", path);
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido ou expirado");
+                        return;
+                    }
+
+                    // As permissões vêm do banco a cada requisição, não do token.
+                    List<GrantedAuthority> authorities = funcionario.get().getPermissoes().stream()
+                            .<GrantedAuthority>map(p -> new SimpleGrantedAuthority(p.getPermissao()))
+                            .toList();
+
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     email,
                                     null,
-                                    Collections.emptyList()
+                                    authorities
                             );
 
                     authentication.setDetails(
