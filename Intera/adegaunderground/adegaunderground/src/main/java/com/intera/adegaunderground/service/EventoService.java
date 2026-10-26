@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -168,16 +169,13 @@ public class EventoService {
             )
                     : "-";
 
-            Double saldoDevedor = cliente.getSaldoDevedor() != null
-                    ? cliente.getSaldoDevedor()
-                    : 0.0;
-
-            String status = saldoDevedor <= 0 ? "Pago" : "Em Aberto";
+            BigDecimal saldoDevedor = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
+            String status = saldoDevedor.signum() <= 0 ? "Pago" : "Em Aberto";
 
             lista.add(new FiadoDTO(
                     cliente.getIdCliente(),
                     cliente.getNome(),
-                    saldoDevedor,
+                    saldoDevedor.doubleValue(),
                     dataVenda,
                     status,
                     new ArrayList<>()
@@ -202,27 +200,13 @@ public class EventoService {
         Cliente cliente = clienteRepository.findById(dto.getIdCliente())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        Double saldoAtual = cliente.getSaldoDevedor() != null
-                ? cliente.getSaldoDevedor()
-                : 0.0;
-
-        Double valorPagamento = dto.getValorPagamento();
-
-        if (valorPagamento == null || valorPagamento <= 0) {
-            throw new RuntimeException("Valor de pagamento inválido");
-        }
-
-        if (valorPagamento > saldoAtual) {
-            throw new RuntimeException("Valor de pagamento maior que a dívida");
-        }
-
-        Double novoSaldo = saldoAtual - valorPagamento;
-
-        cliente.setSaldoDevedor(novoSaldo);
-
-        if (novoSaldo <= 0) {
-            cliente.setSaldoDevedor(0.0);
-        }
+        BigDecimal saldoAtual = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
+        Double valorDto = dto.getValorPagamento();
+        if (valorDto == null || valorDto <= 0) throw new RuntimeException("Valor de pagamento inválido");
+        BigDecimal valorPagamento = BigDecimal.valueOf(valorDto);
+        if (valorPagamento.compareTo(saldoAtual) > 0) throw new RuntimeException("Valor de pagamento maior que a dívida");
+        BigDecimal novoSaldo = saldoAtual.subtract(valorPagamento);
+        cliente.setSaldoDevedor(novoSaldo.signum() <= 0 ? BigDecimal.ZERO : novoSaldo);
 
         clienteRepository.save(cliente);
 
@@ -232,9 +216,9 @@ public class EventoService {
         System.out.println("Forma de pagamento: " + dto.getFormaPagamento());
     }
 
-    private Double calcularTotal(VendaDTO dto){
+    private BigDecimal calcularTotal(VendaDTO dto){
 
-        double total = 0;
+        BigDecimal total = BigDecimal.ZERO;
 
         for(ItemVendaDTO itemDTO : dto.getItens()){
 
@@ -243,8 +227,11 @@ public class EventoService {
                             itemDTO.getIdProduto()
                     ).orElseThrow();
 
-            total += produto.getPreco() *
-                    itemDTO.getQuantidade();
+            total = total.add(
+                    produto.getPreco().multiply(
+                            BigDecimal.valueOf(itemDTO.getQuantidade())
+                    )
+            );
         }
 
         return total;
@@ -267,7 +254,8 @@ public class EventoService {
             evento.setCliente(cliente);
 
             if (!dto.getPago()) {
-                cliente.setSaldoDevedor(cliente.getSaldoDevedor() + calcularTotal(dto));
+                BigDecimal saldoAtual = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
+                cliente.setSaldoDevedor(saldoAtual.add(calcularTotal(dto)));
                 clienteRepository.save(cliente);
             }
         }

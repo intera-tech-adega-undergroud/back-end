@@ -3,10 +3,12 @@ package com.intera.adegaunderground.dto;
 import com.intera.adegaunderground.entity.CategoriaBebida;
 import com.intera.adegaunderground.entity.Embalagem;
 
+import java.math.BigDecimal;
+
 public class ProdutoRequestDTO {
 
     private String nome;
-    private Double preco;
+    private BigDecimal preco;
 
     private Embalagem embalagem;
 
@@ -41,11 +43,11 @@ public class ProdutoRequestDTO {
         this.nome = nome;
     }
 
-    public Double getPreco() {
+    public BigDecimal getPreco() {
         return preco;
     }
 
-    public void setPreco(Double preco) {
+    public void setPreco(BigDecimal preco) {
         this.preco = preco;
     }
 
