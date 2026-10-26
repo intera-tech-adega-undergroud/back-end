@@ -13,11 +13,15 @@ public class EstoqueNotifier
     private final List<EstoqueObserver> observers =
             new ArrayList<>();
 
+    /**
+     * O Spring injeta todos os observers registrados como @Component
+     * (console e mensageria), sem o notifier conhecer cada um.
+     */
     public EstoqueNotifier(
-            EstoqueObserverConsole observer
+            List<EstoqueObserver> observers
     ) {
 
-        observers.add(observer);
+        this.observers.addAll(observers);
     }
 
     @Override
