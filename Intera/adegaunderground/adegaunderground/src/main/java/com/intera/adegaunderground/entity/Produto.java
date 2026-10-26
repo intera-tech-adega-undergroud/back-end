@@ -3,6 +3,8 @@ package com.intera.adegaunderground.entity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "tbl_produto")
 @Schema(description = "Representa um produto da adega (bebidas, itens ou combos)")
@@ -16,8 +18,9 @@ public class Produto {
     @Schema(description = "Nome do produto", example = "Cerveja Heineken")
     private String nome;
 
+    @Column(nullable = false, precision = 7, scale = 2)
     @Schema(description = "Preço do produto", example = "12.50")
-    private Double preco;
+    private BigDecimal preco;
 
     @Schema(description = "Indica se o produto está ativo", example = "true")
     private Boolean ativo;
@@ -63,11 +66,11 @@ public class Produto {
         this.nome = nome;
     }
 
-    public Double getPreco() {
+    public BigDecimal getPreco() {
         return preco;
     }
 
-    public void setPreco(Double preco) {
+    public void setPreco(BigDecimal preco) {
         this.preco = preco;
     }
 

@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "tbl_cliente")
 @Schema(description = "Representa um cliente da adega")
@@ -30,9 +32,9 @@ public class Cliente {
 
     @NotNull(message = "Saldo devedor é obrigatório")
     @Min(value = 0, message = "O valor mínimo é 0")
-    @Column(nullable = false)
-    @Schema(description = "Saldo devedor do cliente", example = "0.0")
-    private Double saldoDevedor;
+    @Column(nullable = false, precision = 10, scale = 2)
+    @Schema(description = "Saldo devedor do cliente", example = "0.00")
+    private BigDecimal saldoDevedor;
 
     @NotNull(message = "O campo compra fiado é obrigatório")
     @Column(nullable = false)
@@ -71,11 +73,11 @@ public class Cliente {
         this.telefone = telefone;
     }
 
-    public Double getSaldoDevedor() {
+    public BigDecimal getSaldoDevedor() {
         return saldoDevedor;
     }
 
-    public void setSaldoDevedor(Double saldoDevedor) {
+    public void setSaldoDevedor(BigDecimal saldoDevedor) {
         this.saldoDevedor = saldoDevedor;
     }
 
