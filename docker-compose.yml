@@ -1,0 +1,26 @@
+name: adega-underground
+
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: adega-rabbitmq
+    hostname: adega-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Defina RABBITMQ_USER no arquivo .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD no arquivo .env}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-adega}
+    ports:
+      - "127.0.0.1:5672:5672"     # AMQP: porta usada pelos serviços Java
+      - "127.0.0.1:15672:15672"   # Painel web de gerenciamento
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  rabbitmq-data:

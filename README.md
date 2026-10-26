@@ -129,3 +129,25 @@ openssl rand -base64 32
 Isso gera uma chave aleatória segura com 32 caracteres.
 Copie o resultado e cole em `JWT_SECRET=` no arquivo `.env`.
 
+## Mensageria (RabbitMQ)
+
+O RabbitMQ roda via Docker e é compartilhado pelo back-end e pelos microsserviços
+(`notification-service` e `daily-report-service`).
+
+1. Preencha `RABBITMQ_USER` e `RABBITMQ_PASSWORD` no seu `.env` (veja `.env.example`).
+2. Na raiz deste repositório, rode:
+
+```powershell
+docker compose up -d
+docker compose ps   # aguarde o status (healthy)
+```
+
+3. Painel de gerenciamento: http://localhost:15672 (vhost `adega`).
+
+| Comando | Efeito |
+|---|---|
+| `docker compose stop` | Para o broker e mantém os dados |
+| `docker compose down` | Remove o container e mantém os dados (volume) |
+| `docker compose down -v` | Remove tudo, **inclusive filas e mensagens** |
+
+O usuário e a senha só são aplicados na primeira criação do volume. Para trocá-los, use `down -v`.
