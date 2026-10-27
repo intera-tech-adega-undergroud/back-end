@@ -63,4 +63,20 @@ public class GlobalExceptionHandler {
                 "message", "Erro interno do servidor"
         ));
     }
+
+    @ExceptionHandler(
+            org.springframework.web.method.annotation
+                    .MethodArgumentTypeMismatchException.class
+    )
+    public ResponseEntity<Map<String, Object>> handleParameterTypeMismatch(
+            org.springframework.web.method.annotation
+                    .MethodArgumentTypeMismatchException ex
+    ) {
+        return ResponseEntity.badRequest().body(
+                Map.of(
+                        "timestamp", Instant.now().toString(),
+                        "message", "Parâmetro inválido: " + ex.getName()
+                )
+        );
+    }
 }

@@ -6,6 +6,9 @@ import com.intera.adegaunderground.entity.Categoria;
 import com.intera.adegaunderground.entity.Produto;
 import com.intera.adegaunderground.repository.CategoriaRepository;
 import com.intera.adegaunderground.repository.ProdutoRepository;
+import com.intera.adegaunderground.dto.CursorPage;
+import com.intera.adegaunderground.dto.StockProductDTO;
+import com.intera.adegaunderground.service.CursorPaginationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,9 @@ public class ProdutoController {
 
     @Autowired
     private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private CursorPaginationService pagination;
 
     @GetMapping
     public ResponseEntity<List<Produto>> listarProdutos() {
@@ -40,6 +46,17 @@ public class ProdutoController {
         return produtoRepository.findByNomeIgnoreCase(nome)
                 .map(produto -> ResponseEntity.ok(produto))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/paginados")
+    public ResponseEntity<CursorPage<StockProductDTO>> listStockPage(
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "5") int limit,
+            @RequestParam(defaultValue = "") String busca
+    ) {
+        return ResponseEntity.ok(
+                pagination.findStock(cursor, limit, busca)
+        );
     }
 
     @PutMapping("/{id}")
