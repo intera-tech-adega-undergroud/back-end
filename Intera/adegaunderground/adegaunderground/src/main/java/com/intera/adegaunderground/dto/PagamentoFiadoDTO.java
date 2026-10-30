@@ -1,20 +1,12 @@
 package com.intera.adegaunderground.dto;
 
-public class PagamentoFiadoDTO {
+import jakarta.validation.constraints.*;
 
-    private Integer idCliente;
-    private Double valorPagamento;
-    private String formaPagamento;
+import java.math.BigDecimal;
 
-    public Integer getIdCliente() {
-        return idCliente;
-    }
-
-    public Double getValorPagamento() {
-        return valorPagamento;
-    }
-
-    public String getFormaPagamento() {
-        return formaPagamento;
-    }
+public record PagamentoFiadoDTO(
+        @NotNull @Positive Integer idCliente,
+        @NotNull @Positive @Digits(integer = 8, fraction = 2) BigDecimal valorPagamento,
+        @NotBlank String formaPagamento
+) {
 }

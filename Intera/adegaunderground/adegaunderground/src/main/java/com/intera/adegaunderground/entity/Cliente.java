@@ -13,7 +13,7 @@ public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Schema(description = "ID do cliente", example = "1")
+    @Schema(description = "ID do cliente", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Integer idCliente;
 
     @NotBlank(message = "Nome é obrigatório")
@@ -31,15 +31,16 @@ public class Cliente {
     private String telefone;
 
     @NotNull(message = "Saldo devedor é obrigatório")
-    @Min(value = 0, message = "O valor mínimo é 0")
+    @DecimalMin(value = "0", message = "O valor mínimo é 0")
+    @Digits(integer = 8, fraction = 2)
     @Column(nullable = false, precision = 10, scale = 2)
     @Schema(description = "Saldo devedor do cliente", example = "0.00")
-    private BigDecimal saldoDevedor;
+    private BigDecimal saldoDevedor = BigDecimal.ZERO;
 
     @NotNull(message = "O campo compra fiado é obrigatório")
     @Column(nullable = false)
     @Schema(description = "Indica se o cliente pode comprar fiado", example = "true")
-    private Boolean compraFiado;
+    private Boolean compraFiado = false;
 
     public Integer getIdCliente() {
         return idCliente;

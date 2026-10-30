@@ -5,7 +5,8 @@ import com.intera.adegaunderground.entity.*;
 import com.intera.adegaunderground.observer.EstoqueNotifier;
 import com.intera.adegaunderground.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 public class EventoService {
@@ -189,22 +192,41 @@ public class EventoService {
             LocalDate dataInicio,
             LocalDate dataFim
     ) {
-        return buscarTodosClientesFiado();
+        if (dataInicio == null || dataFim == null || dataInicio.isAfter(dataFim)) {
+            throw new IllegalArgumentException("Informe as duas datas, em ordem válida.");
+        }
+        return eventoRepository.buscarTodosClientesFiadoPorPeriodo(dataInicio, dataFim).stream()
+                .map(row -> new FiadoDTO(
+                        ((Number) row[0]).intValue(),
+                        (String) row[1],
+                        ((Number) row[2]).doubleValue(),
+                        row[3] == null ? "-" : formatCreditDate(row[3]),
+                        (String) row[4],
+                        List.of()
+                )).toList();
+    }
+
+    private String formatCreditDate(Object value) {
+        LocalDateTime date = value instanceof java.sql.Timestamp timestamp
+                ? timestamp.toLocalDateTime() : (LocalDateTime) value;
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     public List<FiadoDTO> buscarTodosFiados() {
         return buscarTodosClientesFiado();
     }
 
+    @Transactional
     public void registrarPagamentoFiado(PagamentoFiadoDTO dto) {
-        Cliente cliente = clienteRepository.findById(dto.getIdCliente())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+        if (dto.idCliente() == null || dto.valorPagamento() == null || dto.valorPagamento().signum() <= 0) {
+            throw new IllegalArgumentException("Informe cliente e valor de pagamento maior que zero.");
+        }
+        Cliente cliente = clienteRepository.findById(dto.idCliente())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
 
         BigDecimal saldoAtual = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
-        Double valorDto = dto.getValorPagamento();
-        if (valorDto == null || valorDto <= 0) throw new RuntimeException("Valor de pagamento inválido");
-        BigDecimal valorPagamento = BigDecimal.valueOf(valorDto);
-        if (valorPagamento.compareTo(saldoAtual) > 0) throw new RuntimeException("Valor de pagamento maior que a dívida");
+        BigDecimal valorPagamento = dto.valorPagamento();
+        if (valorPagamento.compareTo(saldoAtual) > 0) throw new IllegalArgumentException("Valor de pagamento maior que a dívida");
         BigDecimal novoSaldo = saldoAtual.subtract(valorPagamento);
         cliente.setSaldoDevedor(novoSaldo.signum() <= 0 ? BigDecimal.ZERO : novoSaldo);
 
@@ -213,23 +235,24 @@ public class EventoService {
         System.out.println("Pagamento fiado registrado");
         System.out.println("Cliente: " + cliente.getNome());
         System.out.println("Valor pago: " + valorPagamento);
-        System.out.println("Forma de pagamento: " + dto.getFormaPagamento());
+        System.out.println("Forma de pagamento: " + dto.formaPagamento());
     }
 
     private BigDecimal calcularTotal(VendaDTO dto){
 
         BigDecimal total = BigDecimal.ZERO;
 
-        for(ItemVendaDTO itemDTO : dto.getItens()){
+        for(ItemVendaDTO itemDTO : dto.itens()){
 
             Produto produto =
                     produtoRepository.findById(
-                            itemDTO.getIdProduto()
-                    ).orElseThrow();
+                            itemDTO.idProduto()
+                    ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
+            validateStockProduct(produto);
 
             total = total.add(
                     produto.getPreco().multiply(
-                            BigDecimal.valueOf(itemDTO.getQuantidade())
+                            BigDecimal.valueOf(itemDTO.quantidade())
                     )
             );
         }
@@ -239,21 +262,24 @@ public class EventoService {
 
     @Transactional
     public Evento salvarVenda(VendaDTO dto) {
+        Map<Integer, Integer> quantities = aggregateItems(dto);
 
         Evento evento = new Evento();
         evento.setTipo(TipoEvento.VENDA);
-        evento.setFormaPagamento(dto.getFormaPagamento());
-        evento.setPago(dto.getPago());
+        evento.setFormaPagamento(dto.formaPagamento());
+        evento.setPago(dto.pago());
         evento.setDataHoraEvento(LocalDateTime.now());
 
-        Funcionario funcionario = funcionarioRepository.findById(dto.getIdFuncionario()).orElseThrow();
+        Funcionario funcionario = funcionarioRepository.findById(dto.idFuncionario())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionário não encontrado"));
         evento.setFuncionario(funcionario);
 
-        if (dto.getIdCliente() != null) {
-            Cliente cliente = clienteRepository.findById(dto.getIdCliente()).orElseThrow();
+        if (dto.idCliente() != null) {
+            Cliente cliente = clienteRepository.findById(dto.idCliente())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
             evento.setCliente(cliente);
 
-            if (!dto.getPago()) {
+            if (!dto.pago()) {
                 BigDecimal saldoAtual = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
                 cliente.setSaldoDevedor(saldoAtual.add(calcularTotal(dto)));
                 clienteRepository.save(cliente);
@@ -262,12 +288,13 @@ public class EventoService {
 
         Evento eventoSalvo = eventoRepository.save(evento);
 
-        for (ItemVendaDTO itemDTO : dto.getItens()) {
+        for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
 
             Produto produto =
                     produtoRepository
-                            .findById(itemDTO.getIdProduto())
-                            .orElseThrow();
+                            .findById(entry.getKey())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
+            validateStockProduct(produto);
 
             String categoria =
                     produto.getCategoria()
@@ -278,6 +305,9 @@ public class EventoService {
 
                 List<Combo> itensCombo =
                         comboRepository.findByProdutoPai(produto);
+                if (itensCombo.isEmpty()) {
+                    throw new IllegalArgumentException("Combo sem componentes cadastrados: " + produto.getIdProduto());
+                }
 
                 for (Combo combo : itensCombo) {
 
@@ -285,8 +315,7 @@ public class EventoService {
                             combo.getProdutoFilho();
 
                     Integer quantidadeFinal =
-                            combo.getQuantidade()
-                                    * itemDTO.getQuantidade();
+                            Math.multiplyExact(combo.getQuantidade(), entry.getValue());
 
                     processarBaixaEstoque(
                             produtoCombo,
@@ -298,7 +327,7 @@ public class EventoService {
 
                 processarBaixaEstoque(
                         produto,
-                        itemDTO.getQuantidade()
+                        entry.getValue()
                 );
             }
 
@@ -309,7 +338,7 @@ public class EventoService {
             item.setProduto(produto);
 
             item.setQuantidade(
-                    itemDTO.getQuantidade()
+                    entry.getValue()
             );
 
             itemEventoRepository.save(item);
@@ -318,17 +347,45 @@ public class EventoService {
         return eventoSalvo;
     }
 
+    private Map<Integer, Integer> aggregateItems(VendaDTO dto) {
+        if (dto.idFuncionario() == null || dto.pago() == null
+                || dto.formaPagamento() == null || dto.formaPagamento().isBlank()
+                || dto.itens() == null || dto.itens().isEmpty()) {
+            throw new IllegalArgumentException("Informe funcionário, pagamento e pelo menos um item de venda.");
+        }
+        if (!dto.pago() && dto.idCliente() == null) {
+            throw new IllegalArgumentException("Venda fiado precisa de um cliente.");
+        }
+        Map<Integer, Integer> quantities = new LinkedHashMap<>();
+        for (ItemVendaDTO item : dto.itens()) {
+            if (item == null || item.idProduto() == null || item.quantidade() == null || item.quantidade() <= 0) {
+                throw new IllegalArgumentException("Cada item precisa de produto e quantidade maior que zero.");
+            }
+            quantities.merge(item.idProduto(), item.quantidade(), Math::addExact);
+        }
+        return quantities;
+    }
+
+    private void validateStockProduct(Produto produto) {
+        if (produto == null || produto.getCategoria() == null || produto.getCategoria().getCategoria() == null) {
+            throw new IllegalArgumentException("Produto sem categoria cadastrada.");
+        }
+        if (produto.getPreco() == null || produto.getQtdUnidade() == null || produto.getQtdMinimo() == null) {
+            throw new IllegalArgumentException("Produto com preço ou dados de estoque incompletos: " + produto.getIdProduto());
+        }
+    }
+
     private void consumirMlUnidadeBebida(
             Produto produtoDose,
             Produto produtoControle,
             Integer quantidadeDosesVendidas
     ) {
 
-        int mlTotalNecessario =
-                (produtoDose.getVolumeMl() != null
-                        ? produtoDose.getVolumeMl()
-                        : 50)
-                        * quantidadeDosesVendidas;
+        if (produtoDose.getVolumeMl() == null || produtoDose.getVolumeMl() <= 0
+                || produtoControle.getVolumeMl() == null || produtoControle.getVolumeMl() <= 0) {
+            throw new IllegalArgumentException("Produto fracionado precisa de volume maior que zero.");
+        }
+        int mlTotalNecessario = Math.multiplyExact(produtoDose.getVolumeMl(), quantidadeDosesVendidas);
 
         System.out.println("\n================ [DEBUG INÍCIO VENDA FRACIONADA] ================");
         System.out.println("Produto vendido: " + produtoDose.getNome());
@@ -376,9 +433,10 @@ public class EventoService {
 
                 unidade =
                         unidadeBebidaRepository
-                                .findFirstByProduto_IdProdutoAndStatusOrderByIdUnidadeBebidaAsc(
+                                .findFirstByProduto_IdProdutoAndStatusAndMlAtualGreaterThanOrderByIdUnidadeBebidaAsc(
                                         produtoControle.getIdProduto(),
-                                        StatusBebida.FECHADO
+                                        StatusBebida.FECHADO,
+                                        0
                                 )
                                 .orElse(null);
 
@@ -392,16 +450,6 @@ public class EventoService {
                             StatusBebida.ABERTO
                     );
 
-                    if (
-                            unidade.getMlAtual() == null
-                                    || unidade.getMlAtual() <= 0
-                    ) {
-
-                        unidade.setMlAtual(
-                                unidade.getMlInicial()
-                        );
-                    }
-
                     unidadeBebidaRepository.save(
                             unidade
                     );
@@ -409,20 +457,15 @@ public class EventoService {
                     int estoqueAnterior =
                             produtoControle.getQtdUnidade();
 
-                    if (
-                            produtoControle.getQtdUnidade() > 0
-                    ) {
+                    produtoControle.setQtdUnidade(
+                            Math.subtractExact(produtoControle.getQtdUnidade(), 1)
+                    );
 
-                        produtoControle.setQtdUnidade(
-                                produtoControle.getQtdUnidade() - 1
-                        );
+                    produtoRepository.save(
+                            produtoControle
+                    );
 
-                        produtoRepository.save(
-                                produtoControle
-                        );
-
-                        verificarEstoque(produtoControle);
-                    }
+                    verificarEstoque(produtoControle);
 
                     System.out.println(
                             "[DEBUG] Estoque físico atualizado: "
@@ -468,7 +511,7 @@ public class EventoService {
                             produtoControle.getQtdUnidade();
 
                     produtoControle.setQtdUnidade(
-                            produtoControle.getQtdUnidade() - 1
+                            Math.subtractExact(produtoControle.getQtdUnidade(), 1)
                     );
 
                     produtoRepository.save(
@@ -569,6 +612,7 @@ public class EventoService {
             Produto produto,
             Integer quantidade
     ) {
+        validateStockProduct(produto);
 
         String categoria =
                 produto.getCategoria()
@@ -582,7 +626,7 @@ public class EventoService {
         if (!exigeFracionamento) {
 
             produto.setQtdUnidade(
-                    produto.getQtdUnidade() - quantidade
+                    Math.subtractExact(produto.getQtdUnidade(), quantidade)
             );
 
             produtoRepository.save(produto);
@@ -594,6 +638,7 @@ public class EventoService {
 
         Produto produtoControle =
                 obterProdutoControleEstoque(produto);
+        validateStockProduct(produtoControle);
 
         consumirMlUnidadeBebida(
                 produto,

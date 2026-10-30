@@ -1,0 +1,1524 @@
+{
+  "item": [
+    {
+      "name": "Login e Funcionários",
+      "item": [
+        {
+          "name": "Entrar (faça primeiro)",
+          "request": {
+            "description": "Preencha email e senhaCripto de uma conta existente. Envie esta requisição primeiro: o token será usado automaticamente nas demais. Não coloque aspas extras no token.",
+            "url": {
+              "path": [
+                "funcionarios",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman.local@example.com\",\n  \"senhaCripto\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set(\"token\", pm.response.json().token);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(\"token\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar funcionário",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. Preencha senha com 8 a 72 caracteres, incluindo maiúscula, número e símbolo. CPF/contato são fictícios: substitua por dados de teste adequados. A conta conectada precisa de usuarios_criar. Escolha as permissões que deseja conceder.",
+            "url": {
+              "path": [
+                "funcionarios"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Operador\",\n  \"sobrenome\": \"Teste\",\n  \"cpf\": \"00000000000\",\n  \"email\": \"operador.teste@example.com\",\n  \"celular\": \"11999990000\",\n  \"senha\": \"\",\n  \"permissoes\": [\n    \"estoque_visualizar\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categorias",
+      "item": [
+        {
+          "name": "Consultar categorias disponíveis",
+          "request": {
+            "description": "Consulte os tipos cadastrados antes de criar produto. Não existe POST de categorias; a carga é feita no banco.",
+            "url": {
+              "path": [
+                "categorias"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Produtos",
+      "item": [
+        {
+          "name": "Buscar por ID",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID.",
+            "url": {
+              "path": [
+                "produtos",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Atualizar produto",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Categoria é o nome do tipo, não um objeto nem ID. DRINK precisa existir no GET /categorias. Volume em ml. Na atualização, qtdUnidade não altera o saldo: use Adicionar unidades ao estoque.",
+            "url": {
+              "path": [
+                "produtos",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Caipirinha de limão\",\n  \"preco\": 20,\n  \"embalagem\": \"ND\",\n  \"volumeMl\": 200,\n  \"qtdMinima\": 2,\n  \"qtdUnidade\": 10,\n  \"categoria\": \"DRINK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Excluir produto",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Esta operação exclui dados. Registros vinculados a vendas podem retornar 409.",
+            "url": {
+              "path": [
+                "produtos",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "DELETE",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. Categoria é o nome do tipo, não um objeto nem ID. DRINK precisa existir no GET /categorias. Volume em ml. Na atualização, qtdUnidade não altera o saldo: use Adicionar unidades ao estoque.",
+            "url": {
+              "path": [
+                "produtos"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Caipirinha de limão\",\n  \"preco\": 20,\n  \"embalagem\": \"ND\",\n  \"volumeMl\": 200,\n  \"qtdMinima\": 2,\n  \"qtdUnidade\": 10,\n  \"categoria\": \"DRINK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Cadastrar produto",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. Categoria é o nome do tipo, não um objeto nem ID. DRINK precisa existir no GET /categorias. Volume em ml. Na atualização, qtdUnidade não altera o saldo: use Adicionar unidades ao estoque.",
+            "url": {
+              "path": [
+                "produtos"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Caipirinha de limão\",\n  \"preco\": 20,\n  \"embalagem\": \"ND\",\n  \"volumeMl\": 200,\n  \"qtdMinima\": 2,\n  \"qtdUnidade\": 10,\n  \"categoria\": \"DRINK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Adicionar unidades ao estoque",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID.",
+            "url": {
+              "path": [
+                "produtos",
+                ":id",
+                "entrada"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantidade\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar produtos por página",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "produtos",
+                "paginados"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": "Opcional. Para a próxima página, cole o cursor retornado e marque este parâmetro.",
+                  "key": "cursor",
+                  "value": ""
+                },
+                {
+                  "disabled": false,
+                  "description": "Edite em Params.",
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "disabled": false,
+                  "description": "Edite em Params.",
+                  "key": "busca",
+                  "value": ""
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Buscar produto pelo nome",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "produtos",
+                "nome",
+                ":nome"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "Caipirinha de limão",
+                  "key": "nome",
+                  "disabled": false,
+                  "description": "Edite em Path Variables."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Garrafas",
+      "item": [
+        {
+          "name": "Buscar por ID",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido.",
+            "url": {
+              "path": [
+                "unidadesBebidas",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Atualizar garrafa",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido.",
+            "url": {
+              "path": [
+                "unidadesBebidas",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mlAtual\": 1000,\n  \"mlInicial\": 1000,\n  \"produto\": {\n    \"idProduto\": 1\n  },\n  \"status\": \"FECHADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Excluir garrafa",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido. Esta operação exclui dados. Registros vinculados a vendas podem retornar 409.",
+            "url": {
+              "path": [
+                "unidadesBebidas",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "DELETE",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido.",
+            "url": {
+              "path": [
+                "unidadesBebidas"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mlAtual\": 1000,\n  \"mlInicial\": 1000,\n  \"produto\": {\n    \"idProduto\": 1\n  },\n  \"status\": \"FECHADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Cadastrar garrafa",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido.",
+            "url": {
+              "path": [
+                "unidadesBebidas"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mlAtual\": 1000,\n  \"mlInicial\": 1000,\n  \"produto\": {\n    \"idProduto\": 1\n  },\n  \"status\": \"FECHADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Buscar garrafas por status",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. Informe somente produto.idProduto, sem repetir os dados do produto. Exemplo: garrafa de 1000 ml; ajuste o volume ao produto escolhido.",
+            "url": {
+              "path": [
+                "unidadesBebidas",
+                "status",
+                ":status"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "FECHADO",
+                  "key": "status",
+                  "disabled": false,
+                  "description": "Edite em Path Variables."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Buscar por ID",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID.",
+            "url": {
+              "path": [
+                "clientes",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Atualizar cliente",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID.",
+            "url": {
+              "path": [
+                "clientes",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cliente de Teste\",\n  \"email\": \"cliente.teste@example.com\",\n  \"telefone\": \"11999990000\",\n  \"compraFiado\": true,\n  \"saldoDevedor\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Excluir cliente",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Esta operação exclui dados. Registros vinculados a vendas podem retornar 409.",
+            "url": {
+              "path": [
+                "clientes",
+                ":id"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "id",
+                  "disabled": false,
+                  "description": "Troque pelo ID do registro desejado."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "DELETE",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "clientes"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cliente de Teste\",\n  \"email\": \"cliente.teste@example.com\",\n  \"telefone\": \"11999990000\",\n  \"compraFiado\": true,\n  \"saldoDevedor\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Cadastrar cliente",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "clientes"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cliente de Teste\",\n  \"email\": \"cliente.teste@example.com\",\n  \"telefone\": \"11999990000\",\n  \"compraFiado\": true,\n  \"saldoDevedor\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar clientes por dívida",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "clientes",
+                "ordeneddivida"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Buscar cliente pelo nome",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "clientes",
+                "nome",
+                ":nome"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "Cliente de Teste",
+                  "key": "nome",
+                  "disabled": false,
+                  "description": "Edite em Path Variables."
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendas e Indicadores",
+      "item": [
+        {
+          "name": "Registrar venda",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. Venda paga via PIX. Use o ID do funcionário retornado no login e um produto cadastrado com categoria. Para venda fiada, use pago=false e informe idCliente de cliente habilitado. Drinks/fracionados exigem configuração de produto pai/garrafas no banco; combos exigem componentes.",
+            "url": {
+              "path": [
+                "eventos",
+                "venda"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formaPagamento\": \"PIX\",\n  \"idFuncionario\": 1,\n  \"itens\": [\n    {\n      \"idProduto\": 1,\n      \"quantidade\": 1\n    }\n  ],\n  \"pago\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Consultar vendas do mês",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos",
+                "vendas-mes"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Consultar ranking de funcionários",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos",
+                "ranking-funcionarios"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Consultar gráfico por período",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos",
+                "grafico-dashboard"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataInicio",
+                  "value": "2026-10-01"
+                },
+                {
+                  "disabled": false,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataFim",
+                  "value": "2026-10-31"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Consultar vendas fiadas",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos",
+                "fiados"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataInicio",
+                  "value": "2026-10-01"
+                },
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataFim",
+                  "value": "2026-10-31"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Consultar faturamento do dia",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "eventos",
+                "faturamento-dia"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fiados",
+      "item": [
+        {
+          "name": "Registrar pagamento de fiado",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar. O ID 1 é ilustrativo: consulte a lista e use um ID existente. Atualizações e exclusões atingem o registro desse ID. O cliente precisa ter dívida; ajuste o valor ao saldo devedor.",
+            "url": {
+              "path": [
+                "fiados",
+                "pagamento"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formaPagamento\": \"PIX\",\n  \"idCliente\": 1,\n  \"valorPagamento\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "fiados"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataInicio",
+                  "value": "2026-10-01"
+                },
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataFim",
+                  "value": "2026-10-31"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "name": "Listar fiados por página",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "fiados",
+                "paginados"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": "Opcional. Para a próxima página, cole o cursor retornado e marque este parâmetro.",
+                  "key": "cursor",
+                  "value": ""
+                },
+                {
+                  "disabled": false,
+                  "description": "Edite em Params.",
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "disabled": false,
+                  "description": "Edite em Params.",
+                  "key": "status",
+                  "value": "Todos"
+                },
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataInicio",
+                  "value": "2026-10-01"
+                },
+                {
+                  "disabled": true,
+                  "description": "AAAA-MM-DD. Para filtrar, marque dataInicio e dataFim juntas.",
+                  "key": "dataFim",
+                  "value": "2026-10-31"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Combos",
+      "item": [
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "combos"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Itens das vendas",
+      "item": [
+        {
+          "name": "Listar",
+          "request": {
+            "description": "Exemplo pronto para editar. Confira os dados antes de enviar.",
+            "url": {
+              "path": [
+                "itens-eventos"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "GET",
+            "body": {}
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notas fiscais",
+      "item": [
+        {
+          "name": "Ler nota fiscal (selecionar arquivo)",
+          "request": {
+            "description": "Em Body → form-data, selecione o arquivo na linha arquivo. Exige OCR_API_KEY válida no servidor.",
+            "url": {
+              "path": [
+                "notas-fiscais",
+                "ocr"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "*/*"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "arquivo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Selecione um JPG, PNG ou PDF no seu computador."
+                }
+              ]
+            }
+          },
+          "response": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "info": {
+    "_postman_id": "e67944f2-4ec5-4db4-b0f4-f9ebf94c410c",
+    "name": "Understock - Fácil",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Comece por Login e Funcionários → Entrar. Preencha a senha no Body; o token é automático. Depois consulte Categorias e Produtos. Os números 1 são exemplos: substitua pelos IDs retornados pelas consultas/cadastros. Use banco de desenvolvimento. POST, PUT, PATCH e DELETE alteram dados; envie cada requisição individualmente, não execute a collection inteira. Senhas ficam em branco de propósito; não exporte credenciais nem tokens."
+  }
+}
