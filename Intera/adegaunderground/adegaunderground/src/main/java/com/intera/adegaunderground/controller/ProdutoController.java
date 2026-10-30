@@ -3,6 +3,7 @@ package com.intera.adegaunderground.controller;
 import com.intera.adegaunderground.dto.EntradaEstoqueDTO;
 import com.intera.adegaunderground.dto.ProdutoRequestDTO;
 import com.intera.adegaunderground.entity.Categoria;
+import com.intera.adegaunderground.entity.CategoriaBebida;
 import com.intera.adegaunderground.entity.Produto;
 import com.intera.adegaunderground.repository.CategoriaRepository;
 import com.intera.adegaunderground.repository.ProdutoRepository;
@@ -62,15 +63,14 @@ public class ProdutoController {
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizar(@PathVariable Integer id, @Valid @RequestBody ProdutoRequestDTO produto) {
 
-        Categoria categoria = categoriaRepository.findByCategoria(produto.getCategoria());
-
         return produtoRepository.findById(id)
                 .map(produtoExistente -> {
-                    produtoExistente.setNome(produto.getNome());
-                    produtoExistente.setPreco(produto.getPreco());
-                    produtoExistente.setQtdMinimo(produto.getQtdMinima());
-                    produtoExistente.setVolumeMl(produto.getVolumeMl());
-                    produtoExistente.setEmbalagem(produto.getEmbalagem());
+                    Categoria categoria = findCategory(produto);
+                    produtoExistente.setNome(produto.nome());
+                    produtoExistente.setPreco(produto.preco());
+                    produtoExistente.setQtdMinimo(produto.qtdMinima());
+                    produtoExistente.setVolumeMl(produto.volumeMl());
+                    produtoExistente.setEmbalagem(produto.embalagem());
                     produtoExistente.setCategoria(categoria);
 
                     Produto atualizado = produtoRepository.save(produtoExistente);
@@ -82,18 +82,18 @@ public class ProdutoController {
     @PostMapping
     public ResponseEntity<?> cadastrar(@Valid @RequestBody ProdutoRequestDTO produto) {
 
-        Categoria categoria = categoriaRepository.findByCategoria(produto.getCategoria());
+        Categoria categoria = findCategory(produto);
 
         Produto novoProduto = new Produto();
 
         novoProduto.setAtivo(true);
-        novoProduto.setEmbalagem(produto.getEmbalagem());
+        novoProduto.setEmbalagem(produto.embalagem());
         novoProduto.setCategoria(categoria);
-        novoProduto.setPreco(produto.getPreco());
-        novoProduto.setNome(produto.getNome());
-        novoProduto.setQtdUnidade(produto.getQtdUnidade());
-        novoProduto.setQtdMinimo(produto.getQtdMinima());
-        novoProduto.setVolumeMl(produto.getVolumeMl());
+        novoProduto.setPreco(produto.preco());
+        novoProduto.setNome(produto.nome());
+        novoProduto.setQtdUnidade(produto.qtdUnidade());
+        novoProduto.setQtdMinimo(produto.qtdMinima());
+        novoProduto.setVolumeMl(produto.volumeMl());
 
         Produto novoProdutoResposta = produtoRepository.save(novoProduto);
         return ResponseEntity.status(201).body(novoProdutoResposta);
@@ -116,9 +116,12 @@ public class ProdutoController {
 
         return produtoRepository.findById(id)
                 .map(produto -> {
+                    if (produto.getQtdUnidade() == null) {
+                        throw new IllegalArgumentException("Produto sem quantidade de estoque cadastrada.");
+                    }
 
                     produto.setQtdUnidade(
-                            produto.getQtdUnidade() + entrada.getQuantidade()
+                            Math.addExact(produto.getQtdUnidade(), entrada.getQuantidade())
                     );
 
                     Produto produtoAtualizado = produtoRepository.save(produto);
@@ -127,5 +130,17 @@ public class ProdutoController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
-}
 
+    private Categoria findCategory(ProdutoRequestDTO produto) {
+        Categoria categoria = categoriaRepository.findByCategoria(produto.categoria());
+        if (categoria == null) {
+            throw new IllegalArgumentException("Categoria não cadastrada. Consulte GET /categorias.");
+        }
+        if ((produto.categoria() == CategoriaBebida.BEBIDA_FRACIONADA
+                || produto.categoria() == CategoriaBebida.DRINK)
+                && produto.volumeMl() <= 0) {
+            throw new IllegalArgumentException("Produtos fracionados e drinks precisam de volume maior que zero.");
+        }
+        return categoria;
+    }
+}

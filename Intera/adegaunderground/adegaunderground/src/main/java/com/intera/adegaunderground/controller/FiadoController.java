@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/fiados")
@@ -58,7 +59,7 @@ public class FiadoController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate dataFim
     ) {
-        if (dataInicio == null || dataFim == null) {
+        if (dataInicio == null && dataFim == null) {
             return ResponseEntity.ok(eventoService.buscarTodosClientesFiado());
         }
 
@@ -66,7 +67,7 @@ public class FiadoController {
     }
 
     @PostMapping("/pagamento")
-    public ResponseEntity<Void> pagarFiado(@RequestBody PagamentoFiadoDTO dto) {
+    public ResponseEntity<Void> pagarFiado(@Valid @RequestBody PagamentoFiadoDTO dto) {
         eventoService.registrarPagamentoFiado(dto);
         return ResponseEntity.ok().build();
     }

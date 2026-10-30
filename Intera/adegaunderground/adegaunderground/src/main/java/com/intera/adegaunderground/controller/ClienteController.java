@@ -5,6 +5,7 @@ import com.intera.adegaunderground.repository.ClienteRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -24,7 +25,8 @@ public class ClienteController {
 
     @GetMapping("/ordeneddivida")
     public ResponseEntity<List<Cliente>> ordenarPorDivida() {
-        return ResponseEntity.ok(clienteRepository.findAll());
+        return ResponseEntity.ok(clienteRepository.findAll(
+                Sort.by(Sort.Direction.DESC, "saldoDevedor").and(Sort.by("idCliente"))));
     }
 
     @GetMapping("/{id}")
@@ -57,6 +59,9 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<?> cadastrar(@Valid @RequestBody Cliente cliente) {
+        if (cliente.getIdCliente() != null) {
+            throw new IllegalArgumentException("Não envie idCliente no cadastro; o banco gera esse campo.");
+        }
 
         if (cliente.getCompraFiado() == null) {
             cliente.setCompraFiado(false);

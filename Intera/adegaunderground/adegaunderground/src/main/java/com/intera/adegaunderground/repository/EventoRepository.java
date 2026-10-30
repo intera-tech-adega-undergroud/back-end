@@ -143,8 +143,9 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
                 ELSE 'Pago'
             END AS status
         FROM tbl_cliente c
-        LEFT JOIN tbl_evento e
+        INNER JOIN tbl_evento e
             ON e.tbl_cliente_id_cliente = c.id_cliente
+            AND e.tipo = 'VENDA'
             AND DATE(e.data_hora_evento) BETWEEN :dataInicio AND :dataFim
         GROUP BY 
             c.id_cliente,

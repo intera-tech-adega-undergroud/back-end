@@ -55,7 +55,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        if (request.getMethod().equals("OPTIONS") || PUBLIC_PATHS.contains(path)) {
+        if (request.getMethod().equals("OPTIONS")
+                || (request.getMethod().equals("POST") && PUBLIC_PATHS.contains(path))) {
             filterChain.doFilter(request, response);
             return;
         }

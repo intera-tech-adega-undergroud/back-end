@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/eventos")
@@ -31,68 +32,20 @@ public class EventoController {
 
     @GetMapping("/vendas-mes")
     public ResponseEntity<?> buscarVendasMes() {
-
-        try {
-
-            VendaBigNumberDTO dto =
-                    eventoService.buscarVendasMes();
-
-            if (dto == null) {
-                return ResponseEntity.noContent().build();
-            }
-
-            return ResponseEntity.ok(dto);
-
-        } catch (Exception e) {
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao buscar vendas do mês");
-        }
+        VendaBigNumberDTO dto = eventoService.buscarVendasMes();
+        return dto == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(dto);
     }
 
     @GetMapping("/faturamento-dia")
     public ResponseEntity<?> buscarFaturamentoDia() {
-
-        try {
-
-            VendaBigNumberDTO dto =
-                    eventoService.buscarFaturamentoDia();
-
-            if (dto == null) {
-                return ResponseEntity.noContent().build();
-            }
-
-            return ResponseEntity.ok(dto);
-
-        } catch (Exception e) {
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao buscar faturamento do dia");
-        }
+        VendaBigNumberDTO dto = eventoService.buscarFaturamentoDia();
+        return dto == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(dto);
     }
 
     @GetMapping("/ranking-funcionarios")
     public ResponseEntity<?> buscarRankFuncionarios() {
-
-        try {
-
-            var lista =
-                    eventoService.buscarRankFuncionarios();
-
-            if (lista == null || lista.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
-
-            return ResponseEntity.ok(lista);
-
-        } catch (Exception e) {
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao buscar ranking de funcionários");
-        }
+        var lista = eventoService.buscarRankFuncionarios();
+        return lista == null || lista.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(lista);
     }
 
     @GetMapping("/grafico-dashboard")
@@ -101,32 +54,8 @@ public class EventoController {
             @RequestParam LocalDate dataFim
     ) {
 
-        try {
-
-            var lista =
-                    eventoService.buscarGraficoDash(
-                            dataInicio,
-                            dataFim
-                    );
-
-            if (lista.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
-
-            return ResponseEntity.ok(lista);
-
-        } catch (IllegalArgumentException e) {
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
-
-        } catch (Exception e) {
-
-            return ResponseEntity
-                    .internalServerError()
-                    .body("Erro interno do servidor");
-        }
+        var lista = eventoService.buscarGraficoDash(dataInicio, dataFim);
+        return lista.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(lista);
     }
 
     @GetMapping("/fiados")
@@ -140,7 +69,7 @@ public class EventoController {
 
     ) {
 
-        if (dataInicio != null && dataFim != null) {
+        if (dataInicio != null || dataFim != null) {
 
             return ResponseEntity.ok(
                     eventoService.buscarFiadosPorPeriodo(
@@ -157,23 +86,9 @@ public class EventoController {
 
     @PostMapping("/venda")
     public ResponseEntity<?> registrarVenda(
-            @RequestBody VendaDTO dto
+            @Valid @RequestBody VendaDTO dto
     ) {
-
-        try {
-
-            Evento evento =
-                    eventoService.salvarVenda(dto);
-
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(evento);
-
-        } catch (Exception e){
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
-        }
+        Evento evento = eventoService.salvarVenda(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(evento);
     }
 }
