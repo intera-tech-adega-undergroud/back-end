@@ -10,81 +10,56 @@ import java.util.List;
 
 public interface EventoRepository extends JpaRepository<Evento, Long> {
 
-    @Query(value = "SELECT \n" +
-            "\tSUM(\n" +
-            "        c.preco * b.quantidade\n" +
-            "\t) AS valor_total_vendido,\n" +
-            "    COUNT(DISTINCT a.id_evento) as total_vendas\n" +
-            "FROM\n" +
-            "\ttbl_evento as a\n" +
-            "INNER JOIN item_evento as b\n" +
-            "\tON a.id_evento = b.id_evento\n" +
-            "INNER JOIN tbl_produto as c\n" +
-            "\tON b.id_produto = c.id_produto\n" +
-            "WHERE\n" +
-            "\ta.tipo = 'VENDA'\n" +
-            "    AND MONTH(a.data_hora_evento) = MONTH(CURDATE())\n" +
-            "    AND YEAR(a.data_hora_evento) = YEAR(CURDATE());", nativeQuery = true)
+    // Receita = total gravado na venda (já com desconto). Não depende do preço atual do produto
+    // e ignora vendas canceladas.
+    @Query(value = """
+            SELECT SUM(a.total) AS valor_total_vendido,
+                   COUNT(a.id_evento) AS total_vendas
+            FROM tbl_evento a
+            WHERE a.tipo = 'VENDA'
+              AND a.status = 'CONCLUIDA'
+              AND MONTH(a.data_hora_evento) = MONTH(CURDATE())
+              AND YEAR(a.data_hora_evento) = YEAR(CURDATE())
+            """, nativeQuery = true)
     List<Object[]> buscarVendasMes();
 
-    @Query(value = "SELECT \n" +
-            "\tSUM(\n" +
-            "        c.preco * b.quantidade\n" +
-            "\t) AS valor_total_vendido,\n" +
-            "    COUNT(DISTINCT a.id_evento) as total_vendas\n" +
-            "FROM\n" +
-            "\ttbl_evento as a\n" +
-            "INNER JOIN item_evento as b\n" +
-            "\tON a.id_evento = b.id_evento\n" +
-            "INNER JOIN tbl_produto as c\n" +
-            "\tON b.id_produto = c.id_produto\n" +
-            "WHERE\n" +
-            "\ta.tipo = 'VENDA'\n" +
-            "    AND DAY(a.data_hora_evento) = DAY(CURDATE())\n" +
-            "    AND MONTH(a.data_hora_evento) = MONTH(CURDATE())\n" +
-            "    AND YEAR(a.data_hora_evento) = YEAR(CURDATE());", nativeQuery = true)
+    @Query(value = """
+            SELECT SUM(a.total) AS valor_total_vendido,
+                   COUNT(a.id_evento) AS total_vendas
+            FROM tbl_evento a
+            WHERE a.tipo = 'VENDA'
+              AND a.status = 'CONCLUIDA'
+              AND DATE(a.data_hora_evento) = CURDATE()
+            """, nativeQuery = true)
     List<Object[]> buscarFaturamentoDia();
 
-    @Query(value = "SELECT \n" +
-            "    f.id_funcionario,\n" +
-            "    f.nome_usuario AS vendedor,\n" +
-            "    COUNT(DISTINCT e.id_evento) AS quantidade_vendas,\n" +
-            "    SUM(\n" +
-            "        p.preco * ie.quantidade\n" +
-            "    ) AS valor_total_vendido\n" +
-            "FROM tbl_funcionario f\n" +
-            "INNER JOIN tbl_evento e\n" +
-            "    ON f.id_funcionario = e.tbl_funcionario_id_funcionario\n" +
-            "INNER JOIN item_evento ie\n" +
-            "    ON e.id_evento = ie.id_evento\n" +
-            "INNER JOIN tbl_produto p\n" +
-            "    ON ie.id_produto = p.id_produto\n" +
-            "WHERE e.tipo = 'VENDA'\n" +
-            "    AND MONTH(e.data_hora_evento) = MONTH(CURDATE())\n" +
-            "    AND YEAR(e.data_hora_evento) = YEAR(CURDATE())\n" +
-            "GROUP BY \n" +
-            "    f.id_funcionario,\n" +
-            "    f.nome_usuario\n" +
-            "ORDER BY valor_total_vendido DESC;", nativeQuery = true)
+    @Query(value = """
+            SELECT f.id_funcionario,
+                   f.nome_usuario AS vendedor,
+                   COUNT(e.id_evento) AS quantidade_vendas,
+                   SUM(e.total) AS valor_total_vendido
+            FROM tbl_funcionario f
+            INNER JOIN tbl_evento e
+                ON f.id_funcionario = e.tbl_funcionario_id_funcionario
+            WHERE e.tipo = 'VENDA'
+              AND e.status = 'CONCLUIDA'
+              AND MONTH(e.data_hora_evento) = MONTH(CURDATE())
+              AND YEAR(e.data_hora_evento) = YEAR(CURDATE())
+            GROUP BY f.id_funcionario, f.nome_usuario
+            ORDER BY valor_total_vendido DESC
+            """, nativeQuery = true)
     List<Object[]> buscarRankFuncionarios();
 
     @Query(value = """
-            SELECT
-                DATE(e.data_hora_evento) AS data,
-                SUM(
-                    p.preco * ie.quantidade
-                ) AS valor_total_vendas
+            SELECT DATE(e.data_hora_evento) AS data,
+                   SUM(e.total) AS valor_total_vendas
             FROM tbl_evento e
-            INNER JOIN item_evento ie
-                ON e.id_evento = ie.id_evento
-            INNER JOIN tbl_produto p
-                ON ie.id_produto = p.id_produto
             WHERE e.tipo = 'VENDA'
-                AND DATE(e.data_hora_evento)
-                    BETWEEN :dataInicio AND :dataFim
+              AND e.status = 'CONCLUIDA'
+              AND DATE(e.data_hora_evento) BETWEEN :dataInicio AND :dataFim
             GROUP BY DATE(e.data_hora_evento)
             ORDER BY DATE(e.data_hora_evento)
-        """, nativeQuery = true)
+            """, nativeQuery = true)
     List<Object[]> buscarGraficoDash(
             @Param("dataInicio") LocalDate dataInicio,
             @Param("dataFim") LocalDate dataFim

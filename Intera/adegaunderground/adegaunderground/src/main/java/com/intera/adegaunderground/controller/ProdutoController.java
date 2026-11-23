@@ -4,7 +4,9 @@ import com.intera.adegaunderground.dto.EntradaEstoqueDTO;
 import com.intera.adegaunderground.dto.ProdutoRequestDTO;
 import com.intera.adegaunderground.entity.Categoria;
 import com.intera.adegaunderground.entity.CategoriaBebida;
+import com.intera.adegaunderground.entity.Funcionario;
 import com.intera.adegaunderground.entity.Produto;
+import com.intera.adegaunderground.repository.FuncionarioRepository;
 import com.intera.adegaunderground.repository.CategoriaRepository;
 import com.intera.adegaunderground.repository.ProdutoRepository;
 import com.intera.adegaunderground.dto.CursorPage;
@@ -26,6 +28,9 @@ public class ProdutoController {
 
     @Autowired
     private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private FuncionarioRepository funcionarioRepository;
 
     @Autowired
     private CursorPaginationService pagination;
@@ -67,6 +72,10 @@ public class ProdutoController {
                 .map(produtoExistente -> {
                     Categoria categoria = findCategory(produto);
                     produtoExistente.setNome(produto.nome());
+                    if (produtoExistente.getPreco() == null
+                            || produtoExistente.getPreco().compareTo(produto.preco()) != 0) {
+                        produtoExistente.setPrecoAlteradoPor(funcionarioLogadoId());
+                    }
                     produtoExistente.setPreco(produto.preco());
                     produtoExistente.setQtdMinimo(produto.qtdMinima());
                     produtoExistente.setVolumeMl(produto.volumeMl());
@@ -142,5 +151,16 @@ public class ProdutoController {
             throw new IllegalArgumentException("Produtos fracionados e drinks precisam de volume maior que zero.");
         }
         return categoria;
+    }
+
+    /** Id do funcionário autenticado (o JWT guarda o e-mail), ou null se não houver. */
+    private Integer funcionarioLogadoId() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            return null;
+        }
+        return funcionarioRepository.findByEmail(auth.getName())
+                .map(Funcionario::getIdFuncionario)
+                .orElse(null);
     }
 }

@@ -98,6 +98,7 @@ public class FuncionarioService {
         }
 
         return funcionarioRepository.findByEmail(email.trim())
+                .filter(f -> !Boolean.FALSE.equals(f.getAtivo()))
                 .filter(f -> senhaConfere(senha, f.getSenhaCripto()));
     }
 

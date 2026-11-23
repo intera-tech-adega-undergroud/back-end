@@ -11,12 +11,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class EventoService {
@@ -41,6 +45,12 @@ public class EventoService {
 
     @Autowired
     private ComboRepository comboRepository;
+
+    @Autowired
+    private FormaPagamentoRepository formaPagamentoRepository;
+
+    @Autowired
+    private EventoPagamentoRepository eventoPagamentoRepository;
 
     private final EstoqueNotifier estoqueNotifier;
 
@@ -238,63 +248,90 @@ public class EventoService {
         System.out.println("Forma de pagamento: " + dto.formaPagamento());
     }
 
-    private BigDecimal calcularTotal(VendaDTO dto){
-
-        BigDecimal total = BigDecimal.ZERO;
-
-        for(ItemVendaDTO itemDTO : dto.itens()){
-
-            Produto produto =
-                    produtoRepository.findById(
-                            itemDTO.idProduto()
-                    ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
-            validateStockProduct(produto);
-
-            total = total.add(
-                    produto.getPreco().multiply(
-                            BigDecimal.valueOf(itemDTO.quantidade())
-                    )
-            );
-        }
-
-        return total;
-    }
-
     @Transactional
     public Evento salvarVenda(VendaDTO dto) {
         Map<Integer, Integer> quantities = aggregateItems(dto);
 
-        Evento evento = new Evento();
-        evento.setTipo(TipoEvento.VENDA);
-        evento.setFormaPagamento(dto.formaPagamento());
-        evento.setPago(dto.pago());
-        evento.setDataHoraEvento(LocalDateTime.now());
-
         Funcionario funcionario = funcionarioRepository.findById(dto.idFuncionario())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionário não encontrado"));
-        evento.setFuncionario(funcionario);
 
+        Cliente cliente = null;
         if (dto.idCliente() != null) {
-            Cliente cliente = clienteRepository.findById(dto.idCliente())
+            cliente = clienteRepository.findById(dto.idCliente())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
-            evento.setCliente(cliente);
+        }
 
-            if (!dto.pago()) {
+        // Precifica com o preço vigente agora; o valor fica gravado na venda (histórico imutável).
+        Map<Integer, Produto> produtos = new LinkedHashMap<>();
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
+            Produto produto = produtoRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
+            validateStockProduct(produto);
+            produtos.put(entry.getKey(), produto);
+            subtotal = subtotal.add(produto.getPreco().multiply(BigDecimal.valueOf(entry.getValue())));
+        }
+        subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
+
+        Desconto desconto = calcularDesconto(dto, subtotal);
+        BigDecimal total = subtotal.subtract(desconto.valor());
+        List<ParcelaPagamento> parcelas = planejarPagamentos(dto, total);
+        BigDecimal valorFiado = calcularValorFiado(dto, parcelas, total);
+        boolean pago = valorFiado.signum() == 0;
+        if (dto.pagamentos() != null && !dto.pagamentos().isEmpty() && dto.pago() != pago) {
+            throw new IllegalArgumentException("O campo 'pago' não confere com as formas de pagamento informadas.");
+        }
+        if (valorFiado.signum() > 0 && cliente == null) {
+            throw new IllegalArgumentException("Venda fiado precisa de um cliente.");
+        }
+
+        Evento evento = new Evento();
+        evento.setTipo(TipoEvento.VENDA);
+        evento.setFormaPagamento(descreverFormas(dto, parcelas));
+        evento.setPago(pago);
+        evento.setDataHoraEvento(LocalDateTime.now());
+        evento.setFuncionario(funcionario);
+        evento.setExecutor(funcionario);
+        evento.setSubtotal(subtotal);
+        evento.setDescontoTipo(desconto.tipo());
+        evento.setDescontoPercentual(desconto.percentual());
+        evento.setDescontoValor(desconto.valor());
+        evento.setTotal(total);
+        evento.setStatus(StatusVenda.CONCLUIDA);
+        evento.setValoresEstimados(false);
+        if (desconto.valor().signum() > 0) {
+            Funcionario autorizador = funcionario;
+            if (dto.idFuncionarioDesconto() != null) {
+                autorizador = funcionarioRepository.findById(dto.idFuncionarioDesconto())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionário do desconto não encontrado"));
+            }
+            evento.setFuncionarioDesconto(autorizador);
+        }
+
+        if (cliente != null) {
+            evento.setCliente(cliente);
+            if (valorFiado.signum() > 0) {
                 BigDecimal saldoAtual = cliente.getSaldoDevedor() != null ? cliente.getSaldoDevedor() : BigDecimal.ZERO;
-                cliente.setSaldoDevedor(saldoAtual.add(calcularTotal(dto)));
+                cliente.setSaldoDevedor(saldoAtual.add(valorFiado));
                 clienteRepository.save(cliente);
             }
         }
 
         Evento eventoSalvo = eventoRepository.save(evento);
 
+        for (ParcelaPagamento parcela : parcelas) {
+            EventoPagamento pagamento = new EventoPagamento();
+            pagamento.setEvento(eventoSalvo);
+            pagamento.setFormaPagamento(parcela.forma());
+            pagamento.setValorRecebido(parcela.recebido());
+            pagamento.setValorAplicado(parcela.aplicado());
+            pagamento.setTroco(parcela.troco());
+            eventoPagamentoRepository.save(pagamento);
+        }
+
         for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
 
-            Produto produto =
-                    produtoRepository
-                            .findById(entry.getKey())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
-            validateStockProduct(produto);
+            Produto produto = produtos.get(entry.getKey());
 
             String categoria =
                     produto.getCategoria()
@@ -340,11 +377,127 @@ public class EventoService {
             item.setQuantidade(
                     entry.getValue()
             );
+            item.setPrecoUnitario(produto.getPreco().setScale(2, RoundingMode.HALF_UP));
+            item.setSubtotalItem(produto.getPreco()
+                    .multiply(BigDecimal.valueOf(entry.getValue()))
+                    .setScale(2, RoundingMode.HALF_UP));
 
             itemEventoRepository.save(item);
         }
 
         return eventoSalvo;
+    }
+
+    private record Desconto(DescontoTipo tipo, BigDecimal percentual, BigDecimal valor) {
+    }
+
+    private record ParcelaPagamento(FormaPagamento forma, BigDecimal recebido, BigDecimal aplicado, BigDecimal troco) {
+    }
+
+    private Desconto calcularDesconto(VendaDTO dto, BigDecimal subtotal) {
+        if (dto.descontoTipo() == null) {
+            if (dto.descontoValor() != null && dto.descontoValor().signum() > 0) {
+                throw new IllegalArgumentException("Informe o tipo do desconto (VALOR ou PERCENTUAL).");
+            }
+            return new Desconto(null, null, BigDecimal.ZERO.setScale(2));
+        }
+        if (dto.descontoValor() == null) {
+            throw new IllegalArgumentException("Informe o valor do desconto.");
+        }
+        if (dto.descontoTipo() == DescontoTipo.PERCENTUAL) {
+            if (dto.descontoValor().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new IllegalArgumentException("Desconto percentual não pode passar de 100%.");
+            }
+            BigDecimal percentual = dto.descontoValor().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal valor = subtotal.multiply(percentual)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            return new Desconto(DescontoTipo.PERCENTUAL, percentual, valor);
+        }
+        BigDecimal valor = dto.descontoValor().setScale(2, RoundingMode.HALF_UP);
+        if (valor.compareTo(subtotal) > 0) {
+            throw new IllegalArgumentException("Desconto não pode ser maior que o subtotal da venda.");
+        }
+        return new Desconto(DescontoTipo.VALOR, null, valor);
+    }
+
+    private List<ParcelaPagamento> planejarPagamentos(VendaDTO dto, BigDecimal total) {
+        List<ParcelaPagamento> parcelas = new ArrayList<>();
+        if (dto.pagamentos() == null || dto.pagamentos().isEmpty()) {
+            // Formato antigo: uma única forma, valor integral. Se a forma não for reconhecida, não grava parcela.
+            String codigo = dto.pago() ? codigoDaFormaLegada(dto.formaPagamento()) : "FIADO";
+            if (codigo != null) {
+                formaPagamentoRepository.findByCodigoAndAtivoTrue(codigo)
+                        .ifPresent(f -> parcelas.add(new ParcelaPagamento(f, total, total, BigDecimal.ZERO.setScale(2))));
+            }
+            return parcelas;
+        }
+        // Formas que não são dinheiro valem exatamente o valor informado; o dinheiro recebe o que sobrar
+        // (é ele que pode gerar troco), por isso é processado depois, independente da ordem enviada.
+        List<FormaPagamento> formas = new ArrayList<>();
+        for (PagamentoDTO p : dto.pagamentos()) {
+            String codigo = p.forma().trim().toUpperCase(Locale.ROOT);
+            formas.add(formaPagamentoRepository.findByCodigoAndAtivoTrue(codigo)
+                    .orElseThrow(() -> new IllegalArgumentException("Forma de pagamento inválida: " + codigo)));
+        }
+        ParcelaPagamento[] resultado = new ParcelaPagamento[formas.size()];
+        BigDecimal restante = total;
+        for (int i = 0; i < formas.size(); i++) {
+            if (Boolean.TRUE.equals(formas.get(i).getEhDinheiro())) {
+                continue;
+            }
+            BigDecimal recebido = dto.pagamentos().get(i).valorRecebido().setScale(2, RoundingMode.HALF_UP);
+            if (recebido.compareTo(restante) > 0) {
+                throw new IllegalArgumentException("Valor de " + formas.get(i).getCodigo() + " maior que o restante da venda.");
+            }
+            resultado[i] = new ParcelaPagamento(formas.get(i), recebido, recebido, BigDecimal.ZERO.setScale(2));
+            restante = restante.subtract(recebido);
+        }
+        for (int i = 0; i < formas.size(); i++) {
+            if (resultado[i] != null) {
+                continue;
+            }
+            BigDecimal recebido = dto.pagamentos().get(i).valorRecebido().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal aplicado = recebido.min(restante);
+            resultado[i] = new ParcelaPagamento(formas.get(i), recebido, aplicado, recebido.subtract(aplicado));
+            restante = restante.subtract(aplicado);
+        }
+        parcelas.addAll(List.of(resultado));
+        if (restante.signum() != 0) {
+            throw new IllegalArgumentException("Os pagamentos não cobrem o total da venda. Falta: " + restante);
+        }
+        return parcelas;
+    }
+
+    private BigDecimal calcularValorFiado(VendaDTO dto, List<ParcelaPagamento> parcelas, BigDecimal total) {
+        if (dto.pagamentos() == null || dto.pagamentos().isEmpty()) {
+            return dto.pago() ? BigDecimal.ZERO : total;
+        }
+        return parcelas.stream()
+                .filter(p -> Boolean.TRUE.equals(p.forma().getGeraSaldoDevedor()))
+                .map(ParcelaPagamento::aplicado)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private String descreverFormas(VendaDTO dto, List<ParcelaPagamento> parcelas) {
+        if (dto.pagamentos() == null || dto.pagamentos().isEmpty()) {
+            return dto.formaPagamento();
+        }
+        String texto = parcelas.stream().map(p -> p.forma().getCodigo()).collect(Collectors.joining("+"));
+        return texto.length() > 45 ? texto.substring(0, 45) : texto;
+    }
+
+    private String codigoDaFormaLegada(String forma) {
+        if (forma == null) {
+            return null;
+        }
+        String n = Normalizer.normalize(forma, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").toUpperCase(Locale.ROOT);
+        if (n.contains("DINHEIRO")) return "DINHEIRO";
+        if (n.contains("PIX")) return "PIX";
+        if (n.contains("DEBIT")) return "DEBITO";
+        if (n.contains("CREDIT")) return "CREDITO";
+        if (n.contains("FIADO")) return "FIADO";
+        return null;
     }
 
     private Map<Integer, Integer> aggregateItems(VendaDTO dto) {

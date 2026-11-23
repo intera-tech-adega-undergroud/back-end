@@ -80,8 +80,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
                     Optional<Funcionario> funcionario = funcionarioRepository.findByEmail(email);
 
-                    if (funcionario.isEmpty()) {
-                        securityLogger.warn("Token de usuário inexistente na rota {}", path);
+                    if (funcionario.isEmpty() || Boolean.FALSE.equals(funcionario.get().getAtivo())) {
+                        securityLogger.warn("Token de usuário inexistente ou desativado na rota {}", path);
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido ou expirado");
                         return;
                     }

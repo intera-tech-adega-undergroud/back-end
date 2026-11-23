@@ -25,6 +25,8 @@ class SaleConsistencyTest {
     private ItemEventoRepository items;
     private ComboRepository combos;
     private UnidadeBebidaRepository bottles;
+    private FormaPagamentoRepository paymentMethods;
+    private EventoPagamentoRepository payments;
 
     @BeforeEach
     void setUp() {
@@ -41,6 +43,11 @@ class SaleConsistencyTest {
         ReflectionTestUtils.setField(service, "comboRepository", combos);
         ReflectionTestUtils.setField(service, "unidadeBebidaRepository", bottles);
         ReflectionTestUtils.setField(service, "funcionarioRepository", employees);
+        paymentMethods = mock(FormaPagamentoRepository.class);
+        payments = mock(EventoPagamentoRepository.class);
+        ReflectionTestUtils.setField(service, "formaPagamentoRepository", paymentMethods);
+        ReflectionTestUtils.setField(service, "eventoPagamentoRepository", payments);
+        when(paymentMethods.findByCodigoAndAtivoTrue(any())).thenReturn(Optional.empty());
         when(employees.findById(1)).thenReturn(Optional.of(new Funcionario()));
         when(events.save(any(Evento.class))).thenAnswer(i -> {
             Evento event = i.getArgument(0);

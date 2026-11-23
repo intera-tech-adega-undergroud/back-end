@@ -44,6 +44,20 @@ public class Funcionario {
     @Schema(description = "Email do funcionário", example = "admin@adega.com")
     private String email;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Column(nullable = false)
+    @Schema(description = "false = funcionário desativado (não consegue entrar no sistema)")
+    private Boolean ativo = true;
+
+    @JsonIgnore
+    @Column(name = "desativado_em")
+    private java.time.LocalDateTime desativadoEm;
+
+    public Boolean getAtivo() { return ativo; }
+    public void setAtivo(Boolean ativo) { this.ativo = ativo; }
+    public java.time.LocalDateTime getDesativadoEm() { return desativadoEm; }
+    public void setDesativadoEm(java.time.LocalDateTime desativadoEm) { this.desativadoEm = desativadoEm; }
+
     @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

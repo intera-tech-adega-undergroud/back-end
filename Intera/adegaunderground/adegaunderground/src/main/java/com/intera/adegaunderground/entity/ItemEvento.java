@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "item_evento")
 @IdClass(ItemEventoPK.class)
@@ -30,6 +32,18 @@ public class ItemEvento {
     @Column(nullable = false)
     @Schema(description = "Quantidade do produto no evento", example = "2")
     private Integer quantidade;
+
+    @Column(name = "preco_unitario", precision = 10, scale = 2)
+    @Schema(description = "Preço unitário praticado no momento da venda")
+    private BigDecimal precoUnitario;
+
+    @Column(name = "subtotal_item", precision = 10, scale = 2)
+    private BigDecimal subtotalItem;
+
+    public BigDecimal getPrecoUnitario() { return precoUnitario; }
+    public void setPrecoUnitario(BigDecimal precoUnitario) { this.precoUnitario = precoUnitario; }
+    public BigDecimal getSubtotalItem() { return subtotalItem; }
+    public void setSubtotalItem(BigDecimal subtotalItem) { this.subtotalItem = subtotalItem; }
 
     public Evento getEvento() {
         return evento;

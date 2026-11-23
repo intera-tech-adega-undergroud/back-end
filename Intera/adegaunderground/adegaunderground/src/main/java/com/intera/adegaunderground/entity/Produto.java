@@ -41,6 +41,14 @@ public class Produto {
     @Schema(description = "Valor de compra do produto", example = "2.50")
     private Integer valorCompra;
 
+    @Column(name = "custo_unitario", precision = 10, scale = 2)
+    @Schema(description = "Custo unitário de compra (em reais, com centavos)", example = "2.50")
+    private BigDecimal custoUnitario;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(name = "preco_alterado_por")
+    private Integer precoAlteradoPor;
+
     @ManyToOne
     @JoinColumn(name = "id_categoria")
     @Schema(description = "Categoria do produto")
@@ -137,4 +145,11 @@ public class Produto {
     public void setProdutoPai(Produto produtoPai) {
         this.produtoPai = produtoPai;
     }
+
+    public BigDecimal getCustoUnitario() { return custoUnitario; }
+    public void setCustoUnitario(BigDecimal custoUnitario) { this.custoUnitario = custoUnitario; }
+
+    /** Quem alterou o preço; o trigger de histórico lê e zera esta coluna. */
+    public Integer getPrecoAlteradoPor() { return precoAlteradoPor; }
+    public void setPrecoAlteradoPor(Integer precoAlteradoPor) { this.precoAlteradoPor = precoAlteradoPor; }
 }
