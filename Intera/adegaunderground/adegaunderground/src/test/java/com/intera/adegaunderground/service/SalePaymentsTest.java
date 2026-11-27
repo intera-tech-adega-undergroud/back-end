@@ -45,6 +45,8 @@ class SalePaymentsTest {
         ReflectionTestUtils.setField(service, "clienteRepository", clients);
         ReflectionTestUtils.setField(service, "formaPagamentoRepository", methods);
         ReflectionTestUtils.setField(service, "eventoPagamentoRepository", payments);
+        ReflectionTestUtils.setField(service, "entityManager", mock(jakarta.persistence.EntityManager.class));
+        ReflectionTestUtils.setField(service, "movimentacaoEstoqueService", mock(MovimentacaoEstoqueService.class));
 
         when(employees.findById(1)).thenReturn(Optional.of(new Funcionario()));
         when(employees.findById(2)).thenReturn(Optional.of(new Funcionario()));

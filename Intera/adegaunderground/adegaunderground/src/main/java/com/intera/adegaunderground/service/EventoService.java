@@ -10,6 +10,12 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
@@ -45,6 +51,14 @@ public class EventoService {
 
     @Autowired
     private ComboRepository comboRepository;
+
+    @Autowired
+    private MovimentacaoEstoqueService movimentacaoEstoqueService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private static final Logger logger = LoggerFactory.getLogger(EventoService.class);
 
     @Autowired
     private FormaPagamentoRepository formaPagamentoRepository;
@@ -259,16 +273,26 @@ public class EventoService {
         if (dto.idCliente() != null) {
             cliente = clienteRepository.findById(dto.idCliente())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
+            // Evita perder atualização do saldo devedor com duas vendas fiado simultâneas.
+            entityManager.refresh(cliente, LockModeType.PESSIMISTIC_WRITE);
         }
 
-        // Precifica com o preço vigente agora; o valor fica gravado na venda (histórico imutável).
         Map<Integer, Produto> produtos = new LinkedHashMap<>();
-        BigDecimal subtotal = BigDecimal.ZERO;
         for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
             Produto produto = produtoRepository.findById(entry.getKey())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
             validateStockProduct(produto);
             produtos.put(entry.getKey(), produto);
+        }
+
+        // Trava os produtos (ordem crescente de id) antes de ler preço e saldo.
+        bloquearProdutos(produtos.values());
+
+        // Precifica com o preço vigente agora; o valor fica gravado na venda (histórico imutável).
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
+            Produto produto = produtos.get(entry.getKey());
+            validateStockProduct(produto);
             subtotal = subtotal.add(produto.getPreco().multiply(BigDecimal.valueOf(entry.getValue())));
         }
         subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
@@ -319,6 +343,8 @@ public class EventoService {
 
         Evento eventoSalvo = eventoRepository.save(evento);
 
+        ContextoVenda ctx = new ContextoVenda(eventoSalvo.getIdEvento(), funcionario.getIdFuncionario());
+
         for (ParcelaPagamento parcela : parcelas) {
             EventoPagamento pagamento = new EventoPagamento();
             pagamento.setEvento(eventoSalvo);
@@ -356,7 +382,8 @@ public class EventoService {
 
                     processarBaixaEstoque(
                             produtoCombo,
-                            quantidadeFinal
+                            quantidadeFinal,
+                            ctx
                     );
                 }
 
@@ -364,7 +391,8 @@ public class EventoService {
 
                 processarBaixaEstoque(
                         produto,
-                        entry.getValue()
+                        entry.getValue(),
+                        ctx
                 );
             }
 
@@ -528,226 +556,83 @@ public class EventoService {
         }
     }
 
+    /** Dados da venda em andamento, usados só para rastrear as movimentações nos livros. */
+    private record ContextoVenda(Integer idEvento, Integer idFuncionario) {
+    }
+
     private void consumirMlUnidadeBebida(
             Produto produtoDose,
             Produto produtoControle,
-            Integer quantidadeDosesVendidas
+            Integer quantidadeDosesVendidas,
+            ContextoVenda ctx
     ) {
-
         if (produtoDose.getVolumeMl() == null || produtoDose.getVolumeMl() <= 0
                 || produtoControle.getVolumeMl() == null || produtoControle.getVolumeMl() <= 0) {
             throw new IllegalArgumentException("Produto fracionado precisa de volume maior que zero.");
         }
-        int mlTotalNecessario = Math.multiplyExact(produtoDose.getVolumeMl(), quantidadeDosesVendidas);
+        int mlRestante = Math.multiplyExact(produtoDose.getVolumeMl(), quantidadeDosesVendidas);
+        logger.debug("venda_fracionada produto={} controle={} doses={} ml={}",
+                produtoDose.getIdProduto(), produtoControle.getIdProduto(), quantidadeDosesVendidas, mlRestante);
 
-        System.out.println("\n================ [DEBUG INÍCIO VENDA FRACIONADA] ================");
-        System.out.println("Produto vendido: " + produtoDose.getNome());
-        System.out.println("Produto controle: " + produtoControle.getNome());
-        System.out.println("Quantidade vendida: " + quantidadeDosesVendidas);
-        System.out.println("Volume por unidade: " + produtoDose.getVolumeMl() + "ml");
-        System.out.println("Total necessário: " + mlTotalNecessario + "ml");
-        System.out.println("================================================================");
-
-        int rodada = 1;
-
-        while (mlTotalNecessario > 0) {
-
-            System.out.println(
-                    "\n-> [RODADA "
-                            + rodada
-                            + "] Restante: "
-                            + mlTotalNecessario
-                            + "ml"
-            );
-
-            UnidadeBebida unidade =
-                    unidadeBebidaRepository
-                            .findFirstByProduto_IdProdutoAndStatusOrderByIdUnidadeBebidaAsc(
-                                    produtoControle.getIdProduto(),
-                                    StatusBebida.ABERTO
-                            )
-                            .orElse(null);
-
-            if (unidade != null) {
-
-                System.out.println(
-                        "[DEBUG] Garrafa aberta encontrada. ID="
-                                + unidade.getIdUnidadeBebida()
-                                + " mlAtual="
-                                + unidade.getMlAtual()
-                );
-            }
+        while (mlRestante > 0) {
+            // Leitura com trava (FOR UPDATE): outra venda simultânea espera esta terminar.
+            UnidadeBebida unidade = unidadeBebidaRepository
+                    .findFirstByProduto_IdProdutoAndStatusOrderByIdUnidadeBebidaAsc(
+                            produtoControle.getIdProduto(), StatusBebida.ABERTO)
+                    .orElse(null);
 
             if (unidade == null) {
-
-                System.out.println(
-                        "[DEBUG] Nenhuma garrafa aberta encontrada."
-                );
-
-                unidade =
-                        unidadeBebidaRepository
-                                .findFirstByProduto_IdProdutoAndStatusAndMlAtualGreaterThanOrderByIdUnidadeBebidaAsc(
-                                        produtoControle.getIdProduto(),
-                                        StatusBebida.FECHADO,
-                                        0
-                                )
-                                .orElse(null);
-
-                if (unidade != null) {
-
-                    System.out.println(
-                            "[DEBUG] Garrafa fechada encontrada. Abrindo..."
-                    );
-
-                    unidade.setStatus(
-                            StatusBebida.ABERTO
-                    );
-
-                    unidadeBebidaRepository.save(
-                            unidade
-                    );
-
-                    int estoqueAnterior =
-                            produtoControle.getQtdUnidade();
-
-                    produtoControle.setQtdUnidade(
-                            Math.subtractExact(produtoControle.getQtdUnidade(), 1)
-                    );
-
-                    produtoRepository.save(
-                            produtoControle
-                    );
-
-                    verificarEstoque(produtoControle);
-
-                    System.out.println(
-                            "[DEBUG] Estoque físico atualizado: "
-                                    + estoqueAnterior
-                                    + " -> "
-                                    + produtoControle.getQtdUnidade()
-                    );
-
-                } else {
-
-                    System.out.println(
-                            "[DEBUG ALERT] Nenhuma garrafa encontrada. Criando unidade virtual."
-                    );
-
-                    UnidadeBebida novaUnidade =
-                            new UnidadeBebida();
-
-                    novaUnidade.setProduto(
-                            produtoControle
-                    );
-
-                    novaUnidade.setStatus(
-                            StatusBebida.ABERTO
-                    );
-
-                    int volumeGarrafa =
-                            produtoControle.getVolumeMl();
-
-                    novaUnidade.setMlInicial(
-                            volumeGarrafa
-                    );
-
-                    novaUnidade.setMlAtual(
-                            volumeGarrafa
-                    );
-
-                    unidade =
-                            unidadeBebidaRepository.save(
-                                    novaUnidade
-                            );
-
-                    int estoqueAnterior =
-                            produtoControle.getQtdUnidade();
-
-                    produtoControle.setQtdUnidade(
-                            Math.subtractExact(produtoControle.getQtdUnidade(), 1)
-                    );
-
-                    produtoRepository.save(
-                            produtoControle
-                    );
-
-                    verificarEstoque(produtoControle);
-
-                    System.out.println(
-                            "[DEBUG] Unidade virtual criada. ID="
-                                    + unidade.getIdUnidadeBebida()
-                    );
-
-                    System.out.println(
-                            "[DEBUG] Estoque atualizado: "
-                                    + estoqueAnterior
-                                    + " -> "
-                                    + produtoControle.getQtdUnidade()
-                    );
-                }
+                unidade = abrirGarrafa(produtoControle, ctx);
             }
 
-            int mlDisponivel =
-                    unidade.getMlAtual();
+            int mlAntes = unidade.getMlAtual() == null ? 0 : unidade.getMlAtual();
+            int consumido = Math.min(mlAntes, mlRestante);
+            unidade.setMlAtual(mlAntes - consumido);
+            mlRestante -= consumido;
 
-            System.out.println(
-                    "[DEBUG] ml disponível="
-                            + mlDisponivel
-            );
-
-            if (mlDisponivel >= mlTotalNecessario) {
-
-                int mlAnterior =
-                        unidade.getMlAtual();
-
-                unidade.setMlAtual(
-                        mlDisponivel - mlTotalNecessario
-                );
-
-                System.out.println(
-                        "[DEBUG] mlAtual: "
-                                + mlAnterior
-                                + " -> "
-                                + unidade.getMlAtual()
-                );
-
-                mlTotalNecessario = 0;
-
-            } else {
-
-                unidade.setMlAtual(0);
-
-                mlTotalNecessario -= mlDisponivel;
-
-                System.out.println(
-                        "[DEBUG] Garrafa esgotada. Restante="
-                                + mlTotalNecessario
-                );
+            if (consumido > 0) {
+                movimentacaoEstoqueService.registrarVolume(unidade, TipoMovimentoVolume.VENDA, -consumido,
+                        mlAntes, produtoDose.getIdProduto(), ctx.idEvento(), ctx.idFuncionario());
             }
-
             if (unidade.getMlAtual() <= 0) {
-
                 unidade.setMlAtual(0);
-
-                unidade.setStatus(
-                        StatusBebida.FECHADO
-                );
-
-                System.out.println(
-                        "[DEBUG] Garrafa fechada por esgotamento."
-                );
+                unidade.setStatus(StatusBebida.ESGOTADA);
+                unidade.setEsgotadaEm(LocalDateTime.now());
             }
-
-            unidadeBebidaRepository.save(
-                    unidade
-            );
-
-            rodada++;
+            unidadeBebidaRepository.save(unidade);
         }
+    }
 
-        System.out.println(
-                "\n================ [DEBUG FIM VENDA FRACIONADA] ================\n"
-        );
+    /**
+     * Abre uma garrafa para a venda: usa uma lacrada do estoque ou, se não houver, cria uma unidade
+     * "virtual" (estoque negativo é permitido, a venda nunca é bloqueada por saldo).
+     */
+    private UnidadeBebida abrirGarrafa(Produto produtoControle, ContextoVenda ctx) {
+        UnidadeBebida unidade = unidadeBebidaRepository
+                .findFirstByProduto_IdProdutoAndStatusAndMlAtualGreaterThanOrderByIdUnidadeBebidaAsc(
+                        produtoControle.getIdProduto(), StatusBebida.FECHADO, 0)
+                .orElse(null);
+
+        if (unidade == null) {
+            logger.warn("garrafa_virtual_criada produto={} evento={}", produtoControle.getIdProduto(), ctx.idEvento());
+            unidade = new UnidadeBebida();
+            unidade.setProduto(produtoControle);
+            unidade.setMlInicial(produtoControle.getVolumeMl());
+            unidade.setMlAtual(produtoControle.getVolumeMl());
+        }
+        unidade.setStatus(StatusBebida.ABERTO);
+        unidade.setAbertaEm(LocalDateTime.now());
+        unidade = unidadeBebidaRepository.save(unidade);
+
+        int saldoAnterior = produtoControle.getQtdUnidade();
+        produtoControle.setQtdUnidade(Math.subtractExact(saldoAnterior, 1));
+        produtoRepository.save(produtoControle);
+        movimentacaoEstoqueService.registrarEstoque(produtoControle, TipoMovimentoEstoque.ABERTURA_GARRAFA,
+                -1, saldoAnterior, ctx.idEvento(), ctx.idFuncionario());
+        movimentacaoEstoqueService.registrarVolume(unidade, TipoMovimentoVolume.ABERTURA, 0,
+                unidade.getMlAtual(), null, ctx.idEvento(), ctx.idFuncionario());
+        verificarEstoque(produtoControle);
+        return unidade;
     }
 
     private Produto obterProdutoControleEstoque(
@@ -763,7 +648,8 @@ public class EventoService {
 
     private void processarBaixaEstoque(
             Produto produto,
-            Integer quantidade
+            Integer quantidade,
+            ContextoVenda ctx
     ) {
         validateStockProduct(produto);
 
@@ -777,15 +663,12 @@ public class EventoService {
                         || categoria.equals("DRINK");
 
         if (!exigeFracionamento) {
-
-            produto.setQtdUnidade(
-                    Math.subtractExact(produto.getQtdUnidade(), quantidade)
-            );
-
+            int saldoAnterior = produto.getQtdUnidade();
+            produto.setQtdUnidade(Math.subtractExact(saldoAnterior, quantidade));
             produtoRepository.save(produto);
-
+            movimentacaoEstoqueService.registrarEstoque(produto, TipoMovimentoEstoque.VENDA,
+                    Math.negateExact(quantidade), saldoAnterior, ctx.idEvento(), ctx.idFuncionario());
             verificarEstoque(produto);
-
             return;
         }
 
@@ -796,8 +679,37 @@ public class EventoService {
         consumirMlUnidadeBebida(
                 produto,
                 produtoControle,
-                quantidade
+                quantidade,
+                ctx
         );
+    }
+
+    /**
+     * Trava (SELECT ... FOR UPDATE) todos os produtos que a venda vai mexer, sempre em ordem crescente de
+     * id para evitar deadlock entre vendas simultâneas. O refresh garante que o saldo lido é o último
+     * confirmado, mesmo que outra venda tenha terminado enquanto esta esperava.
+     */
+    private void bloquearProdutos(java.util.Collection<Produto> produtosDaVenda) {
+        Map<Integer, Produto> alvo = new java.util.TreeMap<>();
+        for (Produto p : produtosDaVenda) {
+            alvo.put(p.getIdProduto(), p);
+            if (p.getCategoria().getCategoria().toString().equals("COMBO")) {
+                for (Combo c : comboRepository.findByProdutoPai(p)) {
+                    incluirComControle(alvo, c.getProdutoFilho());
+                }
+            } else {
+                incluirComControle(alvo, p);
+            }
+        }
+        for (Produto p : alvo.values()) {
+            entityManager.refresh(p, LockModeType.PESSIMISTIC_WRITE);
+        }
+    }
+
+    private void incluirComControle(Map<Integer, Produto> alvo, Produto produto) {
+        alvo.put(produto.getIdProduto(), produto);
+        Produto controle = obterProdutoControleEstoque(produto);
+        alvo.put(controle.getIdProduto(), controle);
     }
 
     private void verificarEstoque(

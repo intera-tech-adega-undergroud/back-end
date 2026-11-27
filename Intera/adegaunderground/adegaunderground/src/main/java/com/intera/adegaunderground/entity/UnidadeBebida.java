@@ -26,7 +26,7 @@ public class UnidadeBebida {
     @Enumerated(EnumType.STRING)
     @Schema(description = "Status da unidade de bebida", example = "ABERTO")
     @NotNull
-    private StatusBebida status; // ABERTO, FECHADO
+    private StatusBebida status; // ABERTO, FECHADO (lacrada), ESGOTADA
 
     @ManyToOne
     @JoinColumn(name = "id_produto")
@@ -39,6 +39,22 @@ public class UnidadeBebida {
     public boolean isVolumeValid() {
         return mlInicial == null || mlAtual == null || mlAtual <= mlInicial;
     }
+
+    /** Controle de concorrência otimista (coluna versao). */
+    @JsonIgnore
+    @Version
+    private Integer versao;
+
+    @Column(name = "aberta_em")
+    private java.time.LocalDateTime abertaEm;
+
+    @Column(name = "esgotada_em")
+    private java.time.LocalDateTime esgotadaEm;
+
+    public java.time.LocalDateTime getAbertaEm() { return abertaEm; }
+    public void setAbertaEm(java.time.LocalDateTime abertaEm) { this.abertaEm = abertaEm; }
+    public java.time.LocalDateTime getEsgotadaEm() { return esgotadaEm; }
+    public void setEsgotadaEm(java.time.LocalDateTime esgotadaEm) { this.esgotadaEm = esgotadaEm; }
 
     public UnidadeBebida() {}
 

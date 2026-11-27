@@ -45,6 +45,11 @@ public class Produto {
     @Schema(description = "Custo unitário de compra (em reais, com centavos)", example = "2.50")
     private BigDecimal custoUnitario;
 
+    /** Controle de concorrência otimista (coluna versao). */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Version
+    private Integer versao;
+
     @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "preco_alterado_por")
     private Integer precoAlteradoPor;

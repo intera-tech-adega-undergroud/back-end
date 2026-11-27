@@ -46,6 +46,8 @@ class SaleConsistencyTest {
         paymentMethods = mock(FormaPagamentoRepository.class);
         payments = mock(EventoPagamentoRepository.class);
         ReflectionTestUtils.setField(service, "formaPagamentoRepository", paymentMethods);
+        ReflectionTestUtils.setField(service, "entityManager", mock(jakarta.persistence.EntityManager.class));
+        ReflectionTestUtils.setField(service, "movimentacaoEstoqueService", mock(MovimentacaoEstoqueService.class));
         ReflectionTestUtils.setField(service, "eventoPagamentoRepository", payments);
         when(paymentMethods.findByCodigoAndAtivoTrue(any())).thenReturn(Optional.empty());
         when(employees.findById(1)).thenReturn(Optional.of(new Funcionario()));
